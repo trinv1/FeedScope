@@ -135,11 +135,7 @@ async def upload(
         "tries": 0
     }
 
-    print("UPLOAD RECEIVED", image_name, account)
-
     ins = captures.insert_one(doc)
-    print("INSERTED CAPTURE", ins.inserted_id)
-
     return {"ok": True, "id": str(ins.inserted_id)}
 
 #Endpoint to check server can see queued docs
@@ -340,7 +336,7 @@ async def processing_worker():
 
         for doc in batch:
             try:
-                await asyncio.to_thread(process_one_capture, doc)
+                process_one_capture(doc)
                 processed += 1
                 total_processed += 1
             except Exception as e:
@@ -362,8 +358,4 @@ async def processing_worker():
 #Launching when app starts
 @app.on_event("startup")
 async def start_background_worker():
-    if PROCESSOR_ENABLED:
-        asyncio.create_task(processing_worker())
-        print("Background processor started")
-    else:
-        print("Background processor disabled")
+    asyncio.create_task(processing_worker())
