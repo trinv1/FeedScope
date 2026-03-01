@@ -336,7 +336,7 @@ async def processing_worker():
 
         for doc in batch:
             try:
-                process_one_capture(doc)
+                await asyncio.to_thread(process_one_capture, doc)
                 processed += 1
                 total_processed += 1
             except Exception as e:
