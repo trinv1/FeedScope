@@ -135,7 +135,11 @@ async def upload(
         "tries": 0
     }
 
+    print("UPLOAD RECEIVED", image_name, account)
+
     ins = captures.insert_one(doc)
+    print("INSERTED CAPTURE", ins.inserted_id)
+
     return {"ok": True, "id": str(ins.inserted_id)}
 
 #Endpoint to check server can see queued docs
