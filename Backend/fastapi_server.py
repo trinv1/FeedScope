@@ -155,51 +155,67 @@ def process_one_capture(doc):
 
     #Calling API and creating chat completion request
     response = openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a Twitter screenshot parser. "
-                    "Extract ONLY the FIRST main tweet visible in the screenshot. "
-                    "Return ONLY valid JSON. No markdown, no backticks, no explanations.\n"
-                    "{\n"
-                    "  \"username\": \"\",\n"
-                    "  \"display_name\": \"\",\n"
-                    "  \"tweet\": \"\",\n"
-                    "  \"likes\": \"\",\n"
-                    "  \"retweets\": \"\",\n"
-                    "  \"replies\": \"\"\n"
-                    "}\n"
-                )
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            "Extract all visible information for ONLY the first main tweet. "
-                            "Do NOT include replies unless they are part of the first tweet. "
-                            "Required fields:\n"
-                            "- username (@handle)\n"
-                            "- display_name\n"
-                            "- tweet text\n"
-                            "- likes count\n"
-                            "- retweets count\n"
-                            "Return ONLY valid JSON. No extra text."
-                        )
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{content_type};base64,{image_b64}"
-                        }
+    model="gpt-4o-mini",
+    messages=[
+        {
+            "role": "system",
+            "content": (
+                "You are a Twitter/X screenshot parser. "
+                "Your job is to extract ALL clearly visible main-feed tweets from the screenshot. "
+                "Return ONLY valid JSON. No markdown, no backticks, no explanations.\n"
+                "Rules:\n"
+                "- Return ONLY valid JSON.\n"
+                "- Ignore ads, promoted posts, sponsored content, and anything labelled 'Promoted'.\n"
+                "- Ignore sidebars, trends, menus, buttons, search bars, notifications, and any non-feed UI text.\n"
+                "- Ignore partial tweets if too little is visible to identify the tweet reliably.\n"
+                "- If multiple feed tweets are visible, include all of them in top-to-bottom order.\n"
+                "- Do not invent missing values. Use empty strings if a field is not visible.\n"
+                "Return JSON in exactly this format:\n"
+                "{\n"
+                "  \"tweets\": [\n"
+                "    {\n"
+                "      \"username\": \"\",\n"
+                "      \"display_name\": \"\",\n"
+                "      \"tweet\": \"\",\n"
+                "      \"likes\": \"\",\n"
+                "      \"retweets\": \"\",\n"
+                "      \"replies\": \"\"\n"
+                "    }\n"
+                "  ]\n"
+                "}\n"
+            )
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "Extract all visible main-feed tweets from this screenshot. "
+                        "Include only real tweets visible in the central feed. "
+                        "Do not include promoted posts, ads, sponsored content, or anything marked 'Promoted'. "
+                        "Do not include sidebar content or interface text. "
+                        "For each visible tweet, extract:\n"
+                        "- username (@handle)\n"
+                        "- display_name\n"
+                        "- tweet text\n"
+                        "- likes count\n"
+                        "- retweets count\n"
+                        "- replies count\n"
+                        "Return all tweets in top-to-bottom order. "
+                        "Return ONLY valid JSON in the required format."
+                    )
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{content_type};base64,{image_b64}"
                     }
-                ]
-            }
-        ]
-    )
+                }
+            ]
+        }
+    ]
+)
 
     #Extracting model output (JSON string)
     json_output = response.choices[0].message.content
