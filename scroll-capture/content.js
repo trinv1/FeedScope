@@ -15,6 +15,15 @@ function randBetween(a, b) {
   return a + Math.random() * (b - a)
 }
 
+function detectActiveUsername() {
+  const pageText = document.body.innerText.toLowerCase();
+
+  if (pageText.includes("@briansmith2211")) return "boy";
+  if (pageText.includes("@rachelsmith221")) return "girl";
+
+  return "unknown";
+}
+
 //Update scrolling time
 function frameUpdate(ts){
     if (!running) return;
@@ -54,6 +63,12 @@ function frameUpdate(ts){
 
 //Listens for messages from background/popup.js
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type == "GET_ACTIVE_ACCOUNT") {
+    const account = detectActiveUsername();
+    sendResponse({ account });
+    return true;
+  }
+  
   if (msg.type == "START_SCROLL"){
     running = true;
     lastTs = 0;

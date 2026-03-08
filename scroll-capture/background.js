@@ -3,7 +3,6 @@ let captureTimer = null;
 let capturingTabId = null;
 let isUploading = false; // prevents overlapping uploads
 let backoffUntil = 0; // timestamp (ms). If now < this, skip attempts.
-let currentAccount = "boy";
 
 //Injecting content.js into current tab
 async function ensureContentScript(tabId) {
@@ -19,7 +18,7 @@ async function dataUrlToBlob(dataUrl) {
 }
 
 //Upload one capture to Render
-async function uploadToRender({ dataUrl, tabId, pageUrl }) {
+async function uploadToRender({ dataUrl, tabId, pageUrl, account }) {
   const blob = await dataUrlToBlob(dataUrl);
 
   const form = new FormData();
@@ -27,7 +26,7 @@ async function uploadToRender({ dataUrl, tabId, pageUrl }) {
   form.append("tabId", String(tabId));
   form.append("pageUrl", pageUrl ?? "");
   form.append("ts", String(Date.now()));
-  form.append("account", currentAccount);
+  form.append("account", account || "unknown");
 
   const res = await fetch("https://echochamber-q214.onrender.com/upload", {
     method: "POST",
@@ -59,10 +58,18 @@ async function startCaptureLoop(tabId, intervalMs = 1500) {
         quality: 70
       });
 
+      const response = await chrome.tabs.sendMessage(capturingTabId, {
+        type: "GET_ACTIVE_ACCOUNT"
+      });
+
+      const detectedAccount = response?.account ?? "unknown";
+      console.log("Detected account:", detectedAccount, "URL:", tab.url);
+
       await uploadToRender({
         dataUrl,
         tabId: capturingTabId,
-        pageUrl: tab.url
+        pageUrl: tab.url,
+        account: detectedAccount
       });
     } catch (e) {
       console.warn("Capture/upload failed:", e);
@@ -86,7 +93,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     if (msg.type == "START") {
       currentTabId = msg.tabId;
-      currentAccount = msg.account ?? "boy";
       await ensureContentScript(currentTabId);
       await chrome.tabs.sendMessage(currentTabId, { type: "START_SCROLL" });
     
