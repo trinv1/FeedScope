@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import matplotlib.pyplot as plt
 
 API_URL_B = "https://echochamber-q214.onrender.com/stats/boy/political-leaning"
 API_URL_G = "https://echochamber-q214.onrender.com/stats/girl/political-leaning"
@@ -19,11 +20,11 @@ phases = [
     {
         "name": "Phase 3 – Gender + username",
         "start": "14-01-2026",
-        "end": "28-02-2026"
+        "end": "07-03-2026"
     },
     {
         "name": "Phase 4 – Post tweet",
-        "start": "01-03-2026",
+        "start": "08-03-2026",
         "end": "30-03-2026"
     },
     {
@@ -66,10 +67,29 @@ def show_by_phase(df, title):
 
         if phase_df.empty:
             st.write("No data collected yet for this phase.")
-        else:
-            phase_df["date"] = phase_df["date"].dt.date#removing time
-            st.dataframe(phase_df[["date", "political_leaning", "count"]], use_container_width=True)
+        #else:
+         #   phase_df["date"] = phase_df["date"].dt.date#removing time
+          #  st.dataframe(phase_df[["date", "political_leaning", "count"]], use_container_width=True)
+
+        pie_df = (
+            phase_df.groupby("political_leaning", as_index=False)["count"]
+            .sum()
+            .sort_values("count", ascending=False)
+        )
+
+        fig, ax = plt.subplots()
+        ax.pie(
+            pie_df["count"],
+            labels=pie_df["political_leaning"],
+            autopct="%1.1f%%",
+            startangle=90
+        )
+        ax.axis("equal")
+
+        st.pyplot(fig)
+
+        phase_df["date"] = phase_df["date"].dt.date
+        st.dataframe(phase_df[["date", "political_leaning", "count"]], use_container_width=True)
 
 show_by_phase(boy_df, "Male account")
 show_by_phase(girl_df, "Female account")
-
