@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
-import os, traceback, time
+import os
 from datetime import datetime, timezone
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
