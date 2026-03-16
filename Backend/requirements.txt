@@ -8,3 +8,4 @@ pymongo
 python-dotenv
 python-multipart
 rapidfuzz
+matplotlib
