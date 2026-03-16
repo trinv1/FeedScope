@@ -47,49 +47,59 @@ def fetch_data(url):
     df["date"] = pd.to_datetime(df["date"], format="%d-%m-%Y")
     return df.sort_values("date")
 
+#Making pie chart for each phase
+def make_phase_pie(df, start, end):
+    phase_df = df[(df["date"] >= start) & (df["date"] <= end)].copy()
+
+    if phase_df.empty:
+        return None, None
+
+    pie_df = (
+        phase_df.groupby("political_leaning", as_index=False)["count"]
+        .sum()
+        .sort_values("count", ascending=False)
+    )
+
+    fig, ax = plt.subplots()
+    ax.pie(
+        pie_df["count"],
+        labels=pie_df["political_leaning"],
+        autopct="%1.1f%%",
+        startangle=90
+    )
+    ax.axis("equal")
+
+    return fig, phase_df
+
 boy_df = fetch_data(API_URL_B)
 girl_df = fetch_data(API_URL_G)
 
+st.title("Algorithmic Bias Analysis by Phase")
 
-st.title("Algorithmic Bias Analysis")
+#Displaying data for each phase side by side
+for p in phases:
+    start = pd.to_datetime(p["start"], format="%d-%m-%Y")
+    end = pd.to_datetime(p["end"], format="%d-%m-%Y")
 
-#Showing statistics
-def show_by_phase(df, title):
-    st.header(title)
+    st.header(p["name"])
+    col1, col2 = st.columns(2)
 
-    for p in phases:
-        start = pd.to_datetime(p["start"], format="%d-%m-%Y")
-        end = pd.to_datetime(p["end"], format="%d-%m-%Y")
+    with col1:
+        st.subheader("Boy")
+        boy_fig, boy_phase_df = make_phase_pie(boy_df, start, end)
 
-        phase_df = df[(df["date"] >= start) & (df["date"] <= end)].copy()
-
-        st.subheader(p["name"])
-
-        if phase_df.empty:
+        if boy_fig is None:
             st.write("No data collected yet for this phase.")
-        #else:
-         #   phase_df["date"] = phase_df["date"].dt.date#removing time
-          #  st.dataframe(phase_df[["date", "political_leaning", "count"]], use_container_width=True)
+        else:
+            st.pyplot(boy_fig)
 
-        pie_df = (
-            phase_df.groupby("political_leaning", as_index=False)["count"]
-            .sum()
-            .sort_values("count", ascending=False)
-        )
+    with col2:
+        st.subheader("Girl")
+        girl_fig, girl_phase_df = make_phase_pie(girl_df, start, end)
 
-        fig, ax = plt.subplots()
-        ax.pie(
-            pie_df["count"],
-            labels=pie_df["political_leaning"],
-            autopct="%1.1f%%",
-            startangle=90
-        )
-        ax.axis("equal")
+        if girl_fig is None:
+            st.write("No data collected yet for this phase.")
+        else:
+            st.pyplot(girl_fig)
 
-        st.pyplot(fig)
-
-        phase_df["date"] = phase_df["date"].dt.date
-        st.dataframe(phase_df[["date", "political_leaning", "count"]], use_container_width=True)
-
-show_by_phase(boy_df, "Male account")
-show_by_phase(girl_df, "Female account")
+    st.divider()
