@@ -18,15 +18,18 @@ async function dataUrlToBlob(dataUrl) {
 }
 
 //Upload one capture to Render
-async function uploadToRender({ dataUrl, tabId, pageUrl, account }) {
-  const blob = await dataUrlToBlob(dataUrl);
+async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, phaseId, sessionId) {
+  const blob = await (await fetch(dataUrl)).blob();
 
-  const form = new FormData();
-  form.append("image", blob, `${new Date().toISOString()}.jpg`);
-  form.append("tabId", String(tabId));
-  form.append("pageUrl", pageUrl ?? "");
-  form.append("ts", String(Date.now()));
-  form.append("account", account || "unknown");
+  const formData = new FormData();
+  formData.append("image", blob, "capture.png");
+  formData.append("tabId", String(tabId ?? ""));
+  formData.append("pageUrl", pageUrl ?? "");
+  formData.append("ts", ts ?? "");
+  formData.append("studyId", studyId ?? "");
+  formData.append("subjectId", subjectId ?? "");
+  formData.append("phaseId", phaseId ?? "");
+  formData.append("sessionId", sessionId ?? "");
 
   const res = await fetch("https://echochamber-q214.onrender.com/upload", {
     method: "POST",

@@ -14,7 +14,22 @@ async function getActiveTab() {
 document.getElementById("start").addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (!tab || !tab.id) return;
-  await chrome.runtime.sendMessage({ type: "START", tabId: tab.id, captureEveryMs: 2000 });
+  
+  const studyId = document.getElementById("studyId").value.trim();
+  const subjectId = document.getElementById("subjectId").value.trim();
+  const phaseId = document.getElementById("phaseId").value.trim();
+  const sessionId = document.getElementById("sessionId").value.trim();
+  
+  await chrome.runtime.sendMessage({
+    type: "START",
+    tabId: tab.id,
+    captureEveryMs: 2000,
+    studyId,
+    subjectId,
+    phaseId,
+    sessionId
+  });
+
   statusEl.textContent = "Running";
 });
 

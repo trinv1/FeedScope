@@ -109,6 +109,10 @@ async def upload(
     pageUrl: str = Form(""),
     ts: str = Form(""),
     account: str = Form(""),  
+    studyId: str = Form(""),
+    subjectId: str = Form(""),
+    phaseId: str = Form(""),
+    sessionId: str = Form(""),
 ):
     data = await image.read()
     if not data:
@@ -117,20 +121,29 @@ async def upload(
     image_name = image.filename or f"{ts or int(datetime.now().timestamp())}.jpg"
 
     doc = {
-        "created_at": datetime.now(timezone.utc),
-        "image_name": image_name,
-        "tabId": tabId,
-        "pageUrl": pageUrl,
-        "ts": ts,
-        "account": account,
-        "content_type": image.content_type or "image/jpeg",
+        "filename": image.filename,
+        "content_type": image.content_type,
         "image_bytes": Binary(data),
-        "status": "queued",
-        "tries": 0
+        "tab_id": tabId,
+        "page_url": pageUrl,
+        "ts": ts,
+        "study_id": studyId,
+        "subject_id": subjectId,
+        "phase_id": phaseId,
+        "session_id": sessionId,
+        "created_at": datetime.now(timezone.utc),
+        "processed": False,
     }
 
-    ins = captures.insert_one(doc)
-    return {"ok": True, "id": str(ins.inserted_id)}
+    result = captures.insert_one(doc)
+    return {
+        "ok": True,
+        "capture_id": str(result.inserted_id),
+        "study_id": studyId,
+        "subject_id": subjectId,
+        "phase_id": phaseId,
+        "session_id": sessionId,
+    }
 
 #Endpoint to check server can see queued docs
 @app.get("/debug/queue")
