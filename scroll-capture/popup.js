@@ -31,7 +31,7 @@ document.getElementById("start").addEventListener("click", async () => {
   });
 
   statusEl.textContent = "Running";
-});
+}); 
 
 //Runs when stop button is clicked
 document.getElementById("stop").addEventListener("click", async () => {

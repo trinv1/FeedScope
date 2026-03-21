@@ -118,8 +118,6 @@ async def upload(
     if not data:
         raise HTTPException(status_code=400, detail="Empty image")
 
-    image_name = image.filename or f"{ts or int(datetime.now().timestamp())}.jpg"
-
     doc = {
         "filename": image.filename,
         "content_type": image.content_type,
@@ -128,10 +126,12 @@ async def upload(
         "page_url": pageUrl,
         "ts": ts,
         "study_id": studyId,
+        "account": account,
         "subject_id": subjectId,
         "phase_id": phaseId,
         "session_id": sessionId,
         "created_at": datetime.now(timezone.utc),
+        "status": "queued",
         "processed": False,
     }
 
@@ -143,6 +143,7 @@ async def upload(
         "subject_id": subjectId,
         "phase_id": phaseId,
         "session_id": sessionId,
+        "status": "queued",
     }
 
 #Endpoint to check server can see queued docs
@@ -255,10 +256,10 @@ def process_one_capture(doc):
     tweets = parsed.get("tweets", [])
 
     #Choosing destination collection
-    account = (doc.get("account") or "").lower()
-    if account == "boy":
+    subject_id = (doc.get("subject_id") or "").lower()
+    if subject_id == "boy":
         collection = boytwitter
-    elif account == "girl":
+    elif subject_id == "girl":
         collection = girltwitter
     else:
         collection = db["parsedtweets"]

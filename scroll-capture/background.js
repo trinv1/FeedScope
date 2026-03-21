@@ -41,7 +41,7 @@ async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, p
 }
 
 //Start capture+upload loop
-async function startCaptureLoop(tabId, intervalMs = 1500) {
+async function startCaptureLoop(tabId, intervalMs = 1500, studyId = "", subjectId = "", phaseId = "", sessionId = "") {
   stopCaptureLoop();
   capturingTabId = tabId;
 
@@ -68,15 +68,20 @@ async function startCaptureLoop(tabId, intervalMs = 1500) {
       const detectedAccount = response?.account ?? "unknown";
       console.log("Detected account:", detectedAccount, "URL:", tab.url);
 
-      await uploadToRender({
+      const result = await uploadToRender(
         dataUrl,
-        tabId: capturingTabId,
-        pageUrl: tab.url,
-        account: detectedAccount
-      });
+        capturingTabId,
+        tab.url,
+        ts,
+        studyId,
+        subjectId || detectedAccount,
+        phaseId,
+        sessionId
+      );
+    console.log("Upload success:", result);
     } catch (e) {
       console.warn("Capture/upload failed:", e);
-      backoffUntil = Date.now() + 3000; //wait 3 seconds after a failure
+      backoffUntil = Date.now() + 3000;
     } finally {
       isUploading = false;
     }
@@ -100,7 +105,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       await chrome.tabs.sendMessage(currentTabId, { type: "START_SCROLL" });
     
     //start capturing + uploading
-      await startCaptureLoop(currentTabId, msg.captureEveryMs ?? 1000);
+      await startCaptureLoop(
+        currentTabId,
+        msg.captureEveryMs ?? 1000,
+        msg.studyId ?? "",
+        msg.subjectId ?? "",
+        msg.phaseId ?? "",
+        msg.sessionId ?? ""
+    );
     }
 
     if (msg.type == "STOP") {
