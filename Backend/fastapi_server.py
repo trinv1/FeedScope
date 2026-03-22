@@ -72,7 +72,7 @@ def get_studies():
 
 #Subjects endpoint
 @app.get("/subjects")
-def get_subjects(study_id: str):
+def get_subjects(study_id: str = ""):
     query = {"subject_id": {"$ne": ""}}
     if study_id:
         query["study_id"] = study_id
@@ -81,7 +81,7 @@ def get_subjects(study_id: str):
 
 #Phases endpoint
 @app.get("/phases")
-def get_phases(study_id: str, subject_id: str):
+def get_phases(study_id: str = "", subject_id: str = ""):
     query = {"phase_id": {"$ne": ""}}
     if study_id:
         query["study_id"] = study_id
@@ -92,7 +92,7 @@ def get_phases(study_id: str, subject_id: str):
 
 #Sessions endpoint
 @app.get("/sessions")
-def get_sessions(study_id: str, subject_id: str, phase_id: str):
+def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = ""):
     query = {"session_id": {"$ne": ""}}
     if study_id:
         query["study_id"] = study_id

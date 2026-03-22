@@ -8,10 +8,44 @@ API_BASE = "https://echochamber-q214.onrender.com"
 
 st.title("Algorithmic Bias Analysis")
 
-#Filters
-study_id = st.text_input("Study ID", value="")
-subject_id = st.text_input("Subject ID", value="")
-phase_id = st.text_input("Phase ID", value="")
+#Fetching studies from api
+def fetch_studies():
+    r = requests.get(f"{API_BASE}/studies")
+    r.raise_for_status()
+    return r.json()["studies"]
+
+#Fetching subjects from api
+def fetch_subjects(study_id=""):
+    params = {}
+    if study_id:
+        params["study_id"] = study_id
+    r = requests.get(f"{API_BASE}/subjects", params=params)
+    r.raise_for_status()
+    return r.json()["subjects"]
+
+#Fetching from phases from api
+def fetch_phases(study_id="", subject_id=""):
+    params = {}
+    if study_id:
+        params["study_id"] = study_id
+    if subject_id:
+        params["subject_id"] = subject_id
+    r = requests.get(f"{API_BASE}/phases", params=params)
+    r.raise_for_status()
+    return r.json()["phases"]
+
+#Fetching sessions from api
+def fetch_sessions(study_id="", subject_id="", phase_id=""):
+    params = {}
+    if study_id:
+        params["study_id"] = study_id
+    if subject_id:
+        params["subject_id"] = subject_id
+    if phase_id:
+        params["phase_id"] = phase_id
+    r = requests.get(f"{API_BASE}/sessions", params=params)
+    r.raise_for_status()
+    return r.json()["sessions"]
 
 #Fetching tweets
 def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
@@ -69,8 +103,41 @@ def make_pie_from_stats(series):
         startangle=90
     )
     ax.axis("equal")
-
     return fig, df
+
+try:
+    studies = fetch_studies()
+except Exception as e:
+    st.error(f"Could not load studies: {e}")
+    studies = []
+
+study_id = st.selectbox("Study ID", [""] + studies)
+
+try:
+    subjects = fetch_subjects(study_id)
+except Exception as e:
+    st.error(f"Could not load subjects: {e}")
+    subjects = []
+
+subject_id = st.selectbox("Subject ID", [""] + subjects)
+
+try:
+    phases = fetch_phases(study_id, subject_id)
+except Exception as e:
+    st.error(f"Could not load phases: {e}")
+    phases = []
+
+phase_id = st.selectbox("Phase ID", [""] + phases)
+
+try:
+    sessions = fetch_sessions(study_id, subject_id, phase_id)
+except Exception as e:
+    st.error(f"Could not load sessions: {e}")
+    sessions = []
+
+session_id = st.selectbox("Session ID", [""] + sessions)
+
+
 
 #Loading analysis from data
 if st.button("Load analysis"):
