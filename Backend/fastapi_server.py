@@ -64,6 +64,45 @@ def get_tweets(
     data = list(tweets.find(query, {"_id": 0}).sort("image_name", 1))
     return {"count": len(data), "tweets": data}
 
+#Studies endpoint 
+@app.get("/studies")
+def get_studies():
+    studies = tweets.distinct("study_id", {"study_id": {"$ne": ""}})
+    return {"studies": sorted(studies)}
+
+#Subjects endpoint
+@app.get("/subjects")
+def get_subjects(study_id: str):
+    query = {"subject_id": {"$ne": ""}}
+    if study_id:
+        query["study_id"] = study_id
+    subjects = tweets.distinct("subject_id", query)
+    return {"subjects": sorted(subjects)}
+
+#Phases endpoint
+@app.get("/phases")
+def get_phases(study_id: str, subject_id: str):
+    query = {"phase_id": {"$ne": ""}}
+    if study_id:
+        query["study_id"] = study_id
+    if subject_id:
+        query["subject_id"] = subject_id
+    phases = tweets.distinct("phase_id", query)
+    return {"phases": sorted(phases)}
+
+#Sessions endpoint
+@app.get("/sessions")
+def get_sessions(study_id: str, subject_id: str, phase_id: str):
+    query = {"session_id": {"$ne": ""}}
+    if study_id:
+        query["study_id"] = study_id
+    if subject_id:
+        query["subject_id"] = subject_id
+    if phase_id:
+        query["phase_id"] = phase_id
+    sessions = tweets.distinct("session_id", query)
+    return {"sessions": sorted(sessions)}
+
 #Aggregating date a political leaning
 def counts_by_date_and_leaning(study_id="", subject_id="", phase_id="", session_id=""):
     match_stage = {}
