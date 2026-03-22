@@ -42,23 +42,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Getting all tweets from boy account
-@app.get("/tweets/boy")
-def get_boy_tweets():
-    data = list(tweets.find({}, {"_id": 0}))
+#Tweets endpoint
+@app.get("/tweets")
+def get_tweets(
+    study_id: str = "",
+    subject_id: str = "",
+    phase_id: str = "",
+    session_id: str = "",
+):
+    query = {}
+
+    if study_id:
+        query["study_id"] = study_id
+    if subject_id:
+        query["subject_id"] = subject_id
+    if phase_id:
+        query["phase_id"] = phase_id
+    if session_id:
+        query["session_id"] = session_id
+
+    data = list(tweets.find(query, {"_id": 0}).sort("image_name", 1))
     return {"count": len(data), "tweets": data}
 
-#Getting all tweets from girl account
-@app.get("/tweets/girl")
-def get_girl_tweets():
-    data = list(tweets.find({}, {"_id": 0}))
-    return {"count": len(data), "tweets": data}
-
-#Aggregating dates and political leaning
-def counts_by_date_and_leaning(subject_id=None):
+#Aggregating date a political leaning
+def counts_by_date_and_leaning(study_id="", subject_id="", phase_id="", session_id=""):
     match_stage = {}
+
+    if study_id:
+        match_stage["study_id"] = study_id
     if subject_id:
         match_stage["subject_id"] = subject_id
+    if phase_id:
+        match_stage["phase_id"] = phase_id
+    if session_id:
+        match_stage["session_id"] = session_id
 
     pipeline = []
 
@@ -90,14 +107,15 @@ def counts_by_date_and_leaning(subject_id=None):
     ])
     return list(tweets.aggregate(pipeline))
 
-@app.get("/stats/boy/political-leaning")
-def boy_stats():
-    result = counts_by_date_and_leaning("boy")
-    return {"series": result}
-
-@app.get("/stats/girl/political-leaning")
-def girl_stats():
-    result = counts_by_date_and_leaning("girl")
+#Political leaning stats endpoint
+@app.get("/stats/political-leaning")
+def political_leaning_stats(
+    study_id: str = "",
+    subject_id: str = "",
+    phase_id: str = "",
+    session_id: str = "",
+):
+    result = counts_by_date_and_leaning(study_id, subject_id, phase_id, session_id)
     return {"series": result}
 
 os.makedirs("uploads", exist_ok=True)
@@ -109,7 +127,6 @@ async def upload(
     tabId: str = Form(""),
     pageUrl: str = Form(""),
     ts: str = Form(""),
-    account: str = Form(""),  
     studyId: str = Form(""),
     subjectId: str = Form(""),
     phaseId: str = Form(""),
@@ -127,7 +144,6 @@ async def upload(
         "page_url": pageUrl,
         "ts": ts,
         "study_id": studyId,
-        "account": account,
         "subject_id": subjectId,
         "phase_id": phaseId,
         "session_id": sessionId,
@@ -254,13 +270,13 @@ def process_one_capture(doc):
 
     #Parsing JSON returned by model
     parsed = json.loads(json_output)
-    tweets = parsed.get("tweets", [])
+    parsed_tweets = parsed.get("tweets", [])
 
     #Choosing destination collection
     collection = db["tweets"]
 
     #If tweet doesnt exist dont save
-    if not tweets:
+    if item in  parsed_tweets:
         captures.update_one(
             {"_id": doc["_id"]},
             {"$set": {"status": "done", "note": "No tweets extracted"}}
