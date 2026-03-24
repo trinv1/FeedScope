@@ -28,9 +28,15 @@ IDLE_SLEEP_SEC = 3
 client = MongoClient(MONGO_URI)
 db = client["SocialMediaDB"]
 tweets = db["tweets"]
+studies = db["studies"]
+subjects = db["subjects"]
+phases = db["phases"]
 captures = db["captures"]
 
 tweets.create_index("tweet_hash", unique=True, sparse=True)
+studies.create_index("study_id", unique=True, sparse=True)
+subjects.create_index([("study_id", 1), ("subject_id", 1)], unique=True)
+phases.create_index([("study_id", 1), ("phase_id", 1)], unique=True)
 
 app = FastAPI()
 
@@ -64,33 +70,91 @@ def get_tweets(
     data = list(tweets.find(query, {"_id": 0}).sort("image_name", 1))
     return {"count": len(data), "tweets": data}
 
-#Studies endpoint 
+#Endpoint to post studies to mongo
+@app.post("/studies")
+def create_study(
+    study_id: str = Form(...),
+    name: str = Form(""),
+    description: str = Form("")
+):
+    doc = {
+        "study_id": study_id,
+        "name": name,
+        "description": description,
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = studies.insert_one(doc)
+    return {"ok": True, "id": str(result.inserted_id), "study_id": study_id}
+
+#Endpoint to post subjects to mongo
+@app.post("/subjects")
+def create_subject(
+    study_id: str = Form(...),
+    subject_id: str = Form(...),
+    label: str = Form("")
+):
+    doc = {
+        "study_id": study_id,
+        "subject_id": subject_id,
+        "label": label,
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = subjects.insert_one(doc)
+    return {"ok": True, "id": str(result.inserted_id), "study_id": study_id, "subject_id": subject_id}
+
+#Endpoint to post phases to mongo
+@app.post("/phases")
+def create_phase(
+    study_id: str = Form(...),
+    phase_id: str = Form(...),
+    label: str = Form(""),
+    start_date: str = Form(""),
+    end_date: str = Form("")
+):
+    doc = {
+        "study_id": study_id,
+        "phase_id": phase_id,
+        "label": label,
+        "start_date": start_date,
+        "end_date": end_date,
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = phases.insert_one(doc)
+    return {"ok": True, "id": str(result.inserted_id), "study_id": study_id, "phase_id": phase_id}
+
+#Endpoint to get studies 
 @app.get("/studies")
 def get_studies():
-    studies = tweets.distinct("study_id", {"study_id": {"$ne": ""}})
-    return {"studies": sorted(studies)}
+    data = list(
+        studies.find({}, {"_id": 0}).sort("study_id", 1)
+    )
+    return {"studies": data}
 
-#Subjects endpoint
+#Endpoint to get subjects of certain study
 @app.get("/subjects")
 def get_subjects(study_id: str = ""):
-    query = {"subject_id": {"$ne": ""}}
+    query = {}
     if study_id:
         query["study_id"] = study_id
-    subjects = tweets.distinct("subject_id", query)
-    return {"subjects": sorted(subjects)}
 
-#Phases endpoint
+    data = list(
+        subjects.find(query, {"_id": 0}).sort("subject_id", 1)
+    )
+    return {"subjects": data}
+
+#Endpoint to get phases of certain study 
 @app.get("/phases")
-def get_phases(study_id: str = "", subject_id: str = ""):
-    query = {"phase_id": {"$ne": ""}}
+def get_phases(study_id: str = ""):
+    query = {}
     if study_id:
         query["study_id"] = study_id
-    if subject_id:
-        query["subject_id"] = subject_id
-    phases = tweets.distinct("phase_id", query)
-    return {"phases": sorted(phases)}
 
-#Sessions endpoint
+    data = list(
+        phases.find(query, {"_id": 0}).sort("phase_id", 1)
+    )
+    return {"phases": data}
+
+#Endpoint to get sessions 
 @app.get("/sessions")
 def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = ""):
     query = {"session_id": {"$ne": ""}}
