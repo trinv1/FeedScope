@@ -105,23 +105,26 @@ def make_pie_from_stats(series):
     ax.axis("equal")
     return fig, df
 
-#Dropdowns to fetch studies and subjects
+#Dropdowns to fetch studies
 try:
-    studies = fetch_studies()
+    study_docs = fetch_studies()
+    study_options = [doc["study_id"] for doc in study_docs]
 except Exception as e:
     st.error(f"Could not load studies: {e}")
     studies = []
 
-study_id = st.selectbox("Study ID", [""] + studies)
+study_id = st.selectbox("Study ID", [""] + study_options)
 
+#Dropdown to fetch subjects in study
 try:
-    all_subjects = fetch_subjects(study_id)
+    subject_docs = fetch_subjects(study_id)
+    subject_options = [doc["subject_id"] for doc in subject_docs]
 except Exception as e:
     st.error(f"Could not load subjects: {e}")
     all_subjects = []
 
 #Choosing multiple subjects
-subject_ids = st.multiselect("Subject IDs", all_subjects)
+subject_ids = st.multiselect("Subject IDs", subject_options)
 
 #Showing phases that exist for this subject
 if subject_ids:
@@ -129,14 +132,15 @@ if subject_ids:
 else:
     phase_subject_for_filter = ""
 
-#Fetching phases and corresponding subjects
+#Fetching phase in study
 try:
-    phases = fetch_phases(study_id, phase_subject_for_filter)
+    phase_docs = fetch_phases(study_id)
+    phase_options = [doc["phase_id"] for doc in phase_docs]
 except Exception as e:
     st.error(f"Could not load phases: {e}")
     phases = []
 
-phase_id = st.selectbox("Phase ID", [""] + phases)
+phase_id = st.selectbox("Phase ID", [""] + phase_options)
 
 #Fetching sessions 
 try:
