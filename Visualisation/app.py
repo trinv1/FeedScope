@@ -105,6 +105,7 @@ def make_pie_from_stats(series):
     ax.axis("equal")
     return fig, df
 
+#Dropdowns to fetch studies and subjects
 try:
     studies = fetch_studies()
 except Exception as e:
@@ -114,23 +115,32 @@ except Exception as e:
 study_id = st.selectbox("Study ID", [""] + studies)
 
 try:
-    subjects = fetch_subjects(study_id)
+    all_subjects = fetch_subjects(study_id)
 except Exception as e:
     st.error(f"Could not load subjects: {e}")
-    subjects = []
+    all_subjects = []
 
-subject_id = st.selectbox("Subject ID", [""] + subjects)
+#Choosing multiple subjects
+subject_ids = st.multiselect("Subject IDs", all_subjects)
 
+#Showing phases that exist for this subject
+if subject_ids:
+    phase_subject_for_filter = subject_ids[0]
+else:
+    phase_subject_for_filter = ""
+
+#Fetching phases and corresponding subjects
 try:
-    phases = fetch_phases(study_id, subject_id)
+    phases = fetch_phases(study_id, phase_subject_for_filter)
 except Exception as e:
     st.error(f"Could not load phases: {e}")
     phases = []
 
 phase_id = st.selectbox("Phase ID", [""] + phases)
 
+#Fetching sessions 
 try:
-    sessions = fetch_sessions(study_id, subject_id, phase_id)
+    sessions = fetch_sessions(study_id, phase_subject_for_filter, phase_id)
 except Exception as e:
     st.error(f"Could not load sessions: {e}")
     sessions = []
@@ -138,32 +148,34 @@ except Exception as e:
 session_id = st.selectbox("Session ID", [""] + sessions)
 
 
-
 #Loading analysis from data
 if st.button("Load analysis"):
-    try:
-            tweet_data = fetch_tweets(study_id, subject_id, phase_id, session_id)
-            stats_data = fetch_political_leaning(study_id, subject_id, phase_id, session_id)
+    if not subject_ids:
+        st.warning("Please select at least one subject.")   
+    else:
+        cols = st.columns(min(len(subject_ids), 3))
 
-            st.subheader("Tweets")
-            st.write("Tweet count:", tweet_data["count"])
+        #Looping through subject, getting position and placing in available column
+        for i, subject_id in enumerate(subject_ids):
+            col = cols[i % len(cols)]
 
-            tweets_df = pd.DataFrame(tweet_data["tweets"])
-            if tweets_df.empty:
-                st.write("No tweets found for these filters.")
-            else:
-                st.dataframe(tweets_df)
+            with col:
+                st.subheader(subject_id)
+                
+                #Displaying pie chart of stats
+                try:
+                    tweet_data = fetch_tweets(study_id, subject_id, phase_id, session_id)
+                    stats_data = fetch_political_leaning(study_id, subject_id, phase_id, session_id)
 
-            st.subheader("Political leaning breakdown")
-            fig, stats_df = make_pie_from_stats(stats_data["series"])
+                    st.write("Tweet count:", tweet_data["count"])
 
-            if fig is None:
-                st.write("No political-leaning data found for these filters.")
-            else:
-                st.pyplot(fig)
-                st.dataframe(stats_df)
+                    fig, stats_df = make_pie_from_stats(stats_data["series"])
+                    if fig is None:
+                        st.write("No political-leaning data found.")
+                    else:
+                        st.pyplot(fig)
 
-    except requests.HTTPError as e:
-        st.error(f"API error: {e}")
-    except Exception as e:
-        st.error(f"Unexpected error: {e}")
+                except requests.HTTPError as e:
+                    st.error(f"API error: {e}")
+                except Exception as e:
+                    st.error(f"Unexpected error: {e}")
