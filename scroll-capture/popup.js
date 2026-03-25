@@ -43,8 +43,13 @@ async function populateStudies() {
   const studies = await fetchStudies();
   for (const study of studies) {
     const option = document.createElement("option");
-    option.value = study.study_id;
-    option.textContent = study.name || study.study_id;
+    if (typeof study === "string") {
+      option.value = study;
+      option.textContent = study;
+    } else {
+      option.value = study.study_id;
+      option.textContent = study.name || study.study_id;
+    }
     studySelect.appendChild(option);
   }
 }
