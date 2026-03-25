@@ -3,15 +3,88 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-tab1, tab2 = st.tabs(["Analysis", "Manage Setup"])
-
 API_BASE = "https://echochamber-q214.onrender.com"
 
-OWNER_ID = "trin_test_user"
+#Storing user_id and email in session state
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = ""
+
+if "user_email" not in st.session_state:
+    st.session_state["user_email"] = ""
+
+#Helper function to signup user
+def signup_user(email, password):
+    data = {
+        "email": email,
+        "password": password,
+    }
+    r = requests.post(f"{API_BASE}/signup", data=data)
+    r.raise_for_status()
+    return r.json()
+
+#Helper function to login user
+def login_user(email, password):
+    data = {
+        "email": email,
+        "password": password,
+    }
+    r = requests.post(f"{API_BASE}/login", data=data)
+    r.raise_for_status()
+    return r.json()
+
+#If user id isnt in session state, show tabs
+if not st.session_state["user_id"]:
+    tab1, tab2 = st.tabs(["Login", "Sign up"])
+
+    with tab1:
+        #Login form checking user info
+        with st.form("login_form"):
+            login_email = st.text_input("Email")
+            login_password = st.text_input("Password", type="password")
+            login_submit = st.form_submit_button("Login")
+
+            if login_submit:
+                try:
+                    result = login_user(login_email, login_password)
+                    st.session_state["user_id"] = result["user_id"]
+                    st.session_state["user_email"] = result["email"]
+                    st.success("Logged in successfully")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Login failed: {e}")
+        
+        st.sidebar.write(f"Logged in as: {st.session_state['user_email']}")
+
+        if st.sidebar.button("Logout"):
+            st.session_state["user_id"] = ""
+            st.session_state["user_email"] = ""
+            st.rerun()
+
+    with tab2:
+        #Signup form storing user info
+        with st.form("signup_form"):
+            signup_email = st.text_input("Email", key="signup_email")
+            signup_password = st.text_input("Password", type="password", key="signup_password")
+            signup_submit = st.form_submit_button("Sign up")
+
+            if signup_submit:
+                try:
+                    result = signup_user(signup_email, signup_password)
+                    st.session_state["user_id"] = result["user_id"]
+                    st.session_state["user_email"] = result["email"]
+                    st.success("Account created successfully")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Signup failed: {e}")
+
+    st.stop()
+
+tab3, tab4 = st.tabs(["Analysis", "Manage Setup"])
 
 #Helper functions to create study, subject and phase
 def create_study(study_id, name, description):
     data = {
+        "owner_id": st.session_state["user_id"],
         "study_id": study_id,
         "name": name,
         "description": description,
@@ -22,6 +95,7 @@ def create_study(study_id, name, description):
 
 def create_subject(study_id, subject_id, label):
     data = {
+        "owner_id": st.session_state["user_id"],
         "study_id": study_id,
         "subject_id": subject_id,
         "label": label,
@@ -32,6 +106,7 @@ def create_subject(study_id, subject_id, label):
 
 def create_phase(study_id, phase_id, label, start_date, end_date):
     data = {
+        "owner_id": st.session_state["user_id"],
         "study_id": study_id,
         "phase_id": phase_id,
         "label": label,
@@ -44,7 +119,7 @@ def create_phase(study_id, phase_id, label, start_date, end_date):
 
 #Fetching studies from api
 def fetch_studies():
-    params = {"owner_id": OWNER_ID}
+    params = {"owner_id": st.session_state["user_id"]}
     r = requests.get(f"{API_BASE}/studies", params=params)
     r.raise_for_status()
     return r.json()["studies"]
@@ -52,7 +127,7 @@ def fetch_studies():
 #Fetching subjects from api
 def fetch_subjects(study_id=""):
     params = {}
-    params["owner_id"] = OWNER_ID
+    params = {"owner_id": st.session_state["user_id"]}
     if study_id:
         params["study_id"] = study_id
     r = requests.get(f"{API_BASE}/subjects", params=params)
@@ -61,7 +136,7 @@ def fetch_subjects(study_id=""):
 
 #Fetching from phases from api
 def fetch_phases(study_id="", subject_id=""):
-    params = {"owner_id": OWNER_ID}
+    params = {"owner_id": st.session_state["user_id"]}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -72,7 +147,7 @@ def fetch_phases(study_id="", subject_id=""):
 
 #Fetching sessions from api
 def fetch_sessions(study_id="", subject_id="", phase_id=""):
-    params = {"owner_id": OWNER_ID}
+    params = {"owner_id": st.session_state["user_id"]}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -85,7 +160,7 @@ def fetch_sessions(study_id="", subject_id="", phase_id=""):
 
 #Fetching tweets
 def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
-    params = {"owner_id": OWNER_ID}
+    params = {"owner_id": st.session_state["user_id"]}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -102,7 +177,7 @@ def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
 
 #Fetching stats
 def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=""):
-    params = {"owner_id": OWNER_ID}
+    params = {"owner_id": st.session_state["user_id"]}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -116,7 +191,7 @@ def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=
     r.raise_for_status()
     return r.json()
 
-with tab1:
+with tab3:
 
     st.title("Algorithmic Bias Analysis")
 
@@ -224,7 +299,7 @@ with tab1:
                     except Exception as e:
                         st.error(f"Unexpected error: {e}")
 
-with tab2: 
+with tab4: 
     st.header("Create Study")
 
     #Form to create study

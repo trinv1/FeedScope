@@ -201,12 +201,14 @@ def get_subjects(study_id: str = "", owner_id: str = ""):
 
 #Endpoint to get phases of certain study and owner
 @app.get("/phases")
-def get_phases(study_id: str = "", owner_id: str = ""):
+def get_phases(study_id: str = "", owner_id: str = "", subject_id: str = ""):
     query = {}
     if study_id:
         query["study_id"] = study_id
     if owner_id:
         query["owner_id"] = owner_id
+    if subject_id:
+        query["subject_id"] = subject_id
 
     data = list(
         phases.find(query, {"_id": 0}).sort("phase_id", 1)
@@ -215,7 +217,7 @@ def get_phases(study_id: str = "", owner_id: str = ""):
 
 #Endpoint to get sessions 
 @app.get("/sessions")
-def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = ""):
+def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = "", owner_id: str = ""):
     query = {"session_id": {"$ne": ""}}
     if study_id:
         query["study_id"] = study_id
@@ -223,6 +225,9 @@ def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = ""):
         query["subject_id"] = subject_id
     if phase_id:
         query["phase_id"] = phase_id
+    if owner_id:
+        query["owner_id"] = owner_id
+    
     sessions = tweets.distinct("session_id", query)
     return {"sessions": sorted(sessions)}
 
@@ -442,8 +447,7 @@ def process_one_capture(doc):
     #Choosing destination collection
     collection = db["tweets"]
 
-    #If tweet doesnt exist dont save
-    if item in  parsed_tweets:
+    if not parsed_tweets:
         captures.update_one(
             {"_id": doc["_id"]},
             {"$set": {"status": "done", "note": "No tweets extracted"}}
@@ -451,7 +455,7 @@ def process_one_capture(doc):
         return []
 
     #Checking if tweets are duplicates and saving to mongo
-    for item in tweets:
+    for item in parsed_tweets:
         tweet_text = item.get("tweet", "")
         tweet_normalized = normalize_tweet_text(tweet_text)
         tweet_hash = make_tweet_hash(tweet_normalized)
