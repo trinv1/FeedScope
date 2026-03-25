@@ -32,7 +32,9 @@ studies = db["studies"]
 subjects = db["subjects"]
 phases = db["phases"]
 captures = db["captures"]
+users = db["users"]
 
+users.create_index("email", unique=True, sparse=True)
 tweets.create_index("tweet_hash", unique=True, sparse=True)
 studies.create_index("study_id", unique=True, sparse=True)
 subjects.create_index([("study_id", 1), ("subject_id", 1)], unique=True)
@@ -48,9 +50,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Tweets endpoint
+#Get tweets of certain owner, study, subject and phase
 @app.get("/tweets")
 def get_tweets(
+    owner_id: str = "",
     study_id: str = "",
     subject_id: str = "",
     phase_id: str = "",
@@ -58,6 +61,8 @@ def get_tweets(
 ):
     query = {}
 
+    if owner_id:
+        query["owner_id"] = owner_id
     if study_id:
         query["study_id"] = study_id
     if subject_id:
@@ -73,11 +78,13 @@ def get_tweets(
 #Endpoint to post studies to mongo
 @app.post("/studies")
 def create_study(
+    owner_id: str = Form(...),
     study_id: str = Form(...),
     name: str = Form(""),
     description: str = Form("")
 ):
     doc = {
+        "owner_id": owner_id,
         "study_id": study_id,
         "name": name,
         "description": description,
@@ -90,10 +97,12 @@ def create_study(
 @app.post("/subjects")
 def create_subject(
     study_id: str = Form(...),
+    owner_id: str = Form(...),
     subject_id: str = Form(...),
     label: str = Form("")
 ):
     doc = {
+        "owner_id": owner_id,
         "study_id": study_id,
         "subject_id": subject_id,
         "label": label,
@@ -105,6 +114,7 @@ def create_subject(
 #Endpoint to post phases to mongo
 @app.post("/phases")
 def create_phase(
+    owner_id: str = Form(...),
     study_id: str = Form(...),
     phase_id: str = Form(...),
     label: str = Form(""),
@@ -112,6 +122,7 @@ def create_phase(
     end_date: str = Form("")
 ):
     doc = {
+        "owner_id": owner_id,
         "study_id": study_id,
         "phase_id": phase_id,
         "label": label,
@@ -122,32 +133,38 @@ def create_phase(
     result = phases.insert_one(doc)
     return {"ok": True, "id": str(result.inserted_id), "study_id": study_id, "phase_id": phase_id}
 
-#Endpoint to get studies 
+#Endpoint to get studies of certain owner
 @app.get("/studies")
-def get_studies():
-    data = list(
-        studies.find({}, {"_id": 0}).sort("study_id", 1)
-    )
+def get_studies(owner_id: str = ""):
+    query = {}
+    if owner_id:
+        query["owner_id"] = owner_id
+
+    data = list(studies.find(query, {"_id": 0}).sort("study_id", 1))
     return {"studies": data}
 
-#Endpoint to get subjects of certain study
+#Endpoint to get subjects of certain study and owner
 @app.get("/subjects")
-def get_subjects(study_id: str = ""):
+def get_subjects(study_id: str = "", owner_id: str = ""):
     query = {}
     if study_id:
         query["study_id"] = study_id
+    if owner_id:
+        query["owner_id"] = owner_id
 
     data = list(
         subjects.find(query, {"_id": 0}).sort("subject_id", 1)
     )
     return {"subjects": data}
 
-#Endpoint to get phases of certain study 
+#Endpoint to get phases of certain study and owner
 @app.get("/phases")
-def get_phases(study_id: str = ""):
+def get_phases(study_id: str = "", owner_id: str = ""):
     query = {}
     if study_id:
         query["study_id"] = study_id
+    if owner_id:
+        query["owner_id"] = owner_id
 
     data = list(
         phases.find(query, {"_id": 0}).sort("phase_id", 1)
@@ -168,9 +185,11 @@ def get_sessions(study_id: str = "", subject_id: str = "", phase_id: str = ""):
     return {"sessions": sorted(sessions)}
 
 #Aggregating date a political leaning
-def counts_by_date_and_leaning(study_id="", subject_id="", phase_id="", session_id=""):
+def counts_by_date_and_leaning(owner_id ="", study_id="", subject_id="", phase_id="", session_id=""):
     match_stage = {}
 
+    if owner_id:
+        match_stage["owner_id"] = owner_id
     if study_id:
         match_stage["study_id"] = study_id
     if subject_id:
@@ -213,12 +232,13 @@ def counts_by_date_and_leaning(study_id="", subject_id="", phase_id="", session_
 #Political leaning stats endpoint
 @app.get("/stats/political-leaning")
 def political_leaning_stats(
+    owner_id: str = "",
     study_id: str = "",
     subject_id: str = "",
     phase_id: str = "",
     session_id: str = "",
 ):
-    result = counts_by_date_and_leaning(study_id, subject_id, phase_id, session_id)
+    result = counts_by_date_and_leaning(owner_id, study_id, subject_id, phase_id, session_id)
     return {"series": result}
 
 os.makedirs("uploads", exist_ok=True)
@@ -226,6 +246,7 @@ os.makedirs("uploads", exist_ok=True)
 #Endpoint to upload image
 @app.post("/upload")
 async def upload(
+    ownerId: str = Form(""),
     image: UploadFile = File(...),
     tabId: str = Form(""),
     pageUrl: str = Form(""),
@@ -240,6 +261,7 @@ async def upload(
         raise HTTPException(status_code=400, detail="Empty image")
 
     doc = {
+        "owner_id": ownerId,
         "filename": image.filename,
         "content_type": image.content_type,
         "image_bytes": Binary(data),
@@ -412,6 +434,7 @@ def process_one_capture(doc):
             continue
 
         collection.insert_one({
+            "owner_id": doc.get("owner_id", ""),
             "study_id": doc.get("study_id", ""),
             "subject_id": doc.get("subject_id", ""),
             "phase_id": doc.get("phase_id", ""),

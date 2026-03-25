@@ -7,9 +7,12 @@ tab1, tab2 = st.tabs(["Analysis", "Manage Setup"])
 
 API_BASE = "https://echochamber-q214.onrender.com"
 
+OWNER_ID = "trin_test_user"
+
 #Helper functions to create study, subject and phase
 def create_study(study_id, name, description):
     data = {
+        "owner_id": OWNER_ID,
         "study_id": study_id,
         "name": name,
         "description": description,
@@ -42,6 +45,10 @@ def create_phase(study_id, phase_id, label, start_date, end_date):
 
 #Fetching studies from api
 def fetch_studies():
+    params = {"owner_id": OWNER_ID}
+
+    if study_id:
+        params["study_id"] = study_id
     r = requests.get(f"{API_BASE}/studies")
     r.raise_for_status()
     return r.json()["studies"]
@@ -49,6 +56,7 @@ def fetch_studies():
 #Fetching subjects from api
 def fetch_subjects(study_id=""):
     params = {}
+    params["owner_id"] = OWNER_ID
     if study_id:
         params["study_id"] = study_id
     r = requests.get(f"{API_BASE}/subjects", params=params)
@@ -57,7 +65,7 @@ def fetch_subjects(study_id=""):
 
 #Fetching from phases from api
 def fetch_phases(study_id="", subject_id=""):
-    params = {}
+    params = {"owner_id": OWNER_ID}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -68,7 +76,7 @@ def fetch_phases(study_id="", subject_id=""):
 
 #Fetching sessions from api
 def fetch_sessions(study_id="", subject_id="", phase_id=""):
-    params = {}
+    params = {"owner_id": OWNER_ID}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -81,7 +89,7 @@ def fetch_sessions(study_id="", subject_id="", phase_id=""):
 
 #Fetching tweets
 def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
-    params = {}
+    params = {"owner_id": OWNER_ID}
     if study_id:
         params["study_id"] = study_id
     if subject_id:
@@ -98,7 +106,7 @@ def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
 
 #Fetching stats
 def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=""):
-    params = {}
+    params = {"owner_id": OWNER_ID}
     if study_id:
         params["study_id"] = study_id
     if subject_id:

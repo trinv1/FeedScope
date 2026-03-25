@@ -30,6 +30,7 @@ async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, p
   formData.append("subjectId", subjectId ?? "");
   formData.append("phaseId", phaseId ?? "");
   formData.append("sessionId", sessionId ?? "");
+  formData.append("ownerId", "tristan_test_user");
 
   const res = await fetch("https://echochamber-q214.onrender.com/upload", {
     method: "POST",
