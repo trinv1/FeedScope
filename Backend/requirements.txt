@@ -7,3 +7,5 @@ python-dotenv
 python-multipart
 rapidfuzz
 passlib
+passlib[bcrypt]
+bcrypt

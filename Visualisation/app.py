@@ -226,7 +226,7 @@ with tab3:
         study_options = [doc["study_id"] for doc in study_docs]
     except Exception as e:
         st.error(f"Could not load studies: {e}")
-        studies = []
+        study_options = []
 
     study_id = st.selectbox("Study ID", [""] + study_options)
 
@@ -236,7 +236,7 @@ with tab3:
         subject_options = [doc["subject_id"] for doc in subject_docs]
     except Exception as e:
         st.error(f"Could not load subjects: {e}")
-        all_subjects = []
+        subject_options = []
 
     #Choosing multiple subjects
     subject_ids = st.multiselect("Subject IDs", subject_options)
@@ -253,7 +253,7 @@ with tab3:
         phase_options = [doc["phase_id"] for doc in phase_docs]
     except Exception as e:
         st.error(f"Could not load phases: {e}")
-        phases = []
+        phase_options = []
 
     phase_id = st.selectbox("Phase ID", [""] + phase_options)
 
