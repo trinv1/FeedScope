@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+from st_copy import copy_button
 
 API_BASE = "https://echochamber-q214.onrender.com"
 
@@ -53,12 +54,12 @@ if not st.session_state["user_id"]:
                     st.success("Logged in successfully")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Login failed: {e}")
+                    st.error(f"Invalid email or password. Please try again")
 
     with tab2:
         #Signup form storing user info
         with st.form("signup_form"):
-            signup_email = st.text_input("Email", key="signup_email")
+            signup_email = st.text_input("Email", key="signup_email") 
             signup_password = st.text_input("Password", type="password", key="signup_password")
             signup_submit = st.form_submit_button("Sign up")
 
@@ -70,7 +71,7 @@ if not st.session_state["user_id"]:
                     st.success("Account created successfully")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Signup failed: {e}")
+                    st.error(f"Signup failed. Email already exists")
 
     st.stop()
 
@@ -196,8 +197,15 @@ def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=
     return r.json()
 
 with tab3:
-
     st.title("Algorithmic Bias Analysis")
+
+    user_id = st.session_state["user_id"]
+
+    st.write("User ID:", user_id) 
+    copy_button(
+        user_id,
+        key='copy_user_id'
+    )
 
     #Making pie chart from collected stats
     def make_pie_from_stats(series):

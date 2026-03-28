@@ -18,7 +18,7 @@ async function dataUrlToBlob(dataUrl) {
 }
 
 //Upload one capture to Render
-async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, phaseId, sessionId) {
+async function uploadToRender(dataUrl, tabId, pageUrl, ts, ownerId, studyId, subjectId, phaseId, sessionId) {
   const blob = await (await fetch(dataUrl)).blob();
 
   const formData = new FormData();
@@ -26,11 +26,11 @@ async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, p
   formData.append("tabId", String(tabId ?? ""));
   formData.append("pageUrl", pageUrl ?? "");
   formData.append("ts", ts ?? "");
+  formData.append("ownerId", ownerId ?? "");
   formData.append("studyId", studyId ?? "");
   formData.append("subjectId", subjectId ?? "");
   formData.append("phaseId", phaseId ?? "");
   formData.append("sessionId", sessionId ?? "");
-  formData.append("ownerId", "tristan_test_user");
 
   const res = await fetch("https://echochamber-q214.onrender.com/upload", {
     method: "POST",
@@ -42,7 +42,7 @@ async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, p
 }
 
 //Start capture+upload loop
-async function startCaptureLoop(tabId, intervalMs = 1500, studyId = "", subjectId = "", phaseId = "", sessionId = "") {
+async function startCaptureLoop(tabId, intervalMs = 1500, ownerId = "", studyId = "", subjectId = "", phaseId = "", sessionId = "") {
   stopCaptureLoop();
   capturingTabId = tabId;
 
@@ -75,6 +75,7 @@ async function startCaptureLoop(tabId, intervalMs = 1500, studyId = "", subjectI
         capturingTabId,
         tab.url,
         ts,
+        ownerId,
         studyId,
         subjectId || detectedAccount,
         phaseId,
@@ -110,6 +111,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       await startCaptureLoop(
         currentTabId,
         msg.captureEveryMs ?? 1000,
+        msg.ownerId ?? "",
         msg.studyId ?? "",
         msg.subjectId ?? "",
         msg.phaseId ?? "",
