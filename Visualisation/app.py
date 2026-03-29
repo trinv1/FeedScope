@@ -13,6 +13,9 @@ if "user_id" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state["user_email"] = ""
 
+if "auth_token" not in st.session_state:
+    st.session_state["auth_token"] = ""
+
 #Helper function to signup user
 def signup_user(email, password):
     data = {
@@ -51,6 +54,7 @@ if not st.session_state["user_id"]:
                     result = login_user(login_email, login_password)
                     st.session_state["user_id"] = result["user_id"]
                     st.session_state["user_email"] = result["email"]
+                    st.session_state["auth_token"] = result["token"]
                     st.success("Logged in successfully")
                     st.rerun()
                 except Exception as e:
@@ -68,6 +72,7 @@ if not st.session_state["user_id"]:
                     result = signup_user(signup_email, signup_password)
                     st.session_state["user_id"] = result["user_id"]
                     st.session_state["user_email"] = result["email"]
+                    st.session_state["auth_token"] = result["token"]
                     st.success("Account created successfully")
                     st.rerun()
                 except Exception as e:
@@ -82,6 +87,7 @@ st.sidebar.write(f"Logged in as: {st.session_state['user_email']}")
 if st.sidebar.button("Logout"):
     st.session_state["user_id"] = ""
     st.session_state["user_email"] = ""
+    st.session_state["auth_token"] = ""
     st.rerun()
 
 tab3, tab4 = st.tabs(["Analysis", "Manage Setup"])
@@ -183,7 +189,6 @@ def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
     r.raise_for_status()
     return r.json()
 
-
 #Fetching stats
 def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=""):
     params = {"owner_id": st.session_state["user_id"]}
@@ -203,13 +208,9 @@ def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=
 with tab3:
     st.title("Algorithmic Bias Analysis")
 
-    user_id = st.session_state["user_id"]
-
-    st.write("User ID:", user_id) 
-    copy_button(
-        user_id,
-        key='copy_user_id'
-    )
+    st.write("Extension Token:")
+    st.code(st.session_state["auth_token"])
+    copy_button(st.session_state["auth_token"], key="copy_auth_token")
 
     #Making pie chart from collected stats
     def make_pie_from_stats(series):

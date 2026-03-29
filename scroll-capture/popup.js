@@ -1,7 +1,19 @@
 //Promise is a placeholder for a value that is
 //  not yet available but will be in the future
-
+const statusEl = document.getElementById("status");
 const API_BASE = "https://echochamber-q214.onrender.com";
+
+//Calling me endpoint to fetch token
+async function fetchMe(token) {
+  const res = await fetch(`${API_BASE}/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) throw new Error("Failed to load current user");
+  return await res.json();
+}
 
 //Calling studies belonging to owner
 async function fetchStudies(ownerId) {
@@ -36,8 +48,7 @@ async function fetchPhases(ownerId, studyId) {
 }
 
 //Populating study dropdown on popup load in accordance of owner
-async function populateStudies() {
-  const ownerId = document.getElementById("ownerId").value.trim();
+async function populateStudies(ownerId) {
   const studySelect = document.getElementById("studyId");
   studySelect.innerHTML = `<option value="">Select study</option>`;
 
@@ -89,25 +100,46 @@ async function populatePhases(ownerId, studyId) {
   }
 }
 
-//Run when study dropdown changes
-document.getElementById("ownerId").addEventListener("change", async () => {
-  await populateStudies();
+//Listening for when the authentication token changes
+document.getElementById("authToken").addEventListener("change", async () => {
+  try {
+    const token = document.getElementById("authToken").value.trim();
+    await chrome.storage.local.set({ authToken: token });
 
-  document.getElementById("subjectId").innerHTML = `<option value="">Select subject</option>`;
-  document.getElementById("phaseId").innerHTML = `<option value="">Select phase</option>`;
+    const me = await fetchMe(token);
+    await populateStudies(me.user_id);
+
+    document.getElementById("subjectId").innerHTML = `<option value="">Select subject</option>`;
+    document.getElementById("phaseId").innerHTML = `<option value="">Select phase</option>`;
+  } catch (e) {
+    console.error("Failed to load user from token:", e);
+  }
 });
 
+//Study id changing based on auth token and propogates changes to subjects and phases
 document.getElementById("studyId").addEventListener("change", async (e) => {
-  const ownerId = document.getElementById("ownerId").value.trim();
-  const studyId = e.target.value;
-  await populateSubjects(ownerId, studyId);
-  await populatePhases(ownerId, studyId);
+  try {
+    const token = document.getElementById("authToken").value.trim();
+    const me = await fetchMe(token);
+    const ownerId = me.user_id;
+    const studyId = e.target.value;
+
+    await populateSubjects(ownerId, studyId);
+    await populatePhases(ownerId, studyId);
+  } catch (e) {
+    console.error("Failed to load subjects/phases:", e);
+  }
 });
 
-//Populating studies when popup loads
+//Populating studies using auth token when popup loads
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    await populateStudies();
+    const saved = await chrome.storage.local.get(["authToken"]);
+    if (saved.authToken) {
+      document.getElementById("authToken").value = saved.authToken;
+      const me = await fetchMe(saved.authToken);
+      await populateStudies(me.user_id);
+    }
   } catch (e) {
     console.error("Failed to initialise popup:", e);
     statusEl.textContent = "Failed to load study data";
@@ -126,7 +158,12 @@ document.getElementById("start").addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (!tab || !tab.id) return;
   
-  const ownerId = document.getElementById("ownerId").value.trim();
+  const authToken = document.getElementById("authToken").value.trim();
+  await chrome.storage.local.set({ authToken });
+
+  const me = await fetchMe(authToken);
+  const ownerId = me.user_id;
+
   const studyId = document.getElementById("studyId").value.trim();
   const subjectId = document.getElementById("subjectId").value.trim();
   const phaseId = document.getElementById("phaseId").value.trim();
