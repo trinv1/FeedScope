@@ -66,15 +66,17 @@ def signup(
     password: str = Form(...)
 ):
     hashed_password = pwd_context.hash(password)
+    token = secrets.token_hex(32)
 
     doc = {
         "email": email,
         "password_hash": hashed_password,
+        "auth_token": token,
         "created_at": datetime.now(timezone.utc),
     }
 
     result = users.insert_one(doc)
-    return {"ok": True, "user_id": str(result.inserted_id), "email": email}
+    return {"ok": True, "user_id": str(result.inserted_id), "email": email, "token": token}
 
 #Posting login to mongo to verify user
 @app.post("/login")
@@ -103,9 +105,8 @@ def login(
         "token": token
     }
 
-#Turn token into current user
-@app.get("/me")
-def get_me(authorization: str = Header("")):
+#Get current user from token
+def get_current_user(authorization: str = Header("")):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -115,6 +116,12 @@ def get_me(authorization: str = Header("")):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+    return user
+
+#Get current user
+@app.get("/me")
+def get_me(authorization: str = Header("")):
+    user = get_current_user(authorization)
     return {
         "user_id": str(user["_id"]),
         "email": user["email"]
@@ -123,16 +130,16 @@ def get_me(authorization: str = Header("")):
 #Get tweets of certain owner, study, subject and phase
 @app.get("/tweets")
 def get_tweets(
-    owner_id: str = "",
     study_id: str = "",
     subject_id: str = "",
     phase_id: str = "",
     session_id: str = "",
+    authorization: str = Header("")
 ):
-    query = {}
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+    query = {"owner_id": owner_id}
 
-    if owner_id:
-        query["owner_id"] = owner_id
     if study_id:
         query["study_id"] = study_id
     if subject_id:
@@ -148,11 +155,14 @@ def get_tweets(
 #Endpoint to post studies to mongo
 @app.post("/studies")
 def create_study(
-    owner_id: str = Form(...),
     study_id: str = Form(...),
     name: str = Form(""),
-    description: str = Form("")
+    description: str = Form(""),
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     doc = {
         "owner_id": owner_id,
         "study_id": study_id,
@@ -167,10 +177,13 @@ def create_study(
 @app.post("/subjects")
 def create_subject(
     study_id: str = Form(...),
-    owner_id: str = Form(...),
     subject_id: str = Form(...),
-    label: str = Form("")
+    label: str = Form(""),
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     doc = {
         "owner_id": owner_id,
         "study_id": study_id,
@@ -184,13 +197,16 @@ def create_subject(
 #Endpoint to post phases to mongo
 @app.post("/phases")
 def create_phase(
-    owner_id: str = Form(...),
     study_id: str = Form(...),
     phase_id: str = Form(...),
     label: str = Form(""),
     start_date: str = Form(""),
-    end_date: str = Form("")
+    end_date: str = Form(""),
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     doc = {
         "owner_id": owner_id,
         "study_id": study_id,
@@ -206,13 +222,16 @@ def create_phase(
 #Endpoint to post start of session to mongo
 @app.post("/sessions/start")
 def start_session(
-    owner_id: str = Form(...),
     study_id: str = Form(...),
     subject_id: str = Form(""),
     phase_id: str = Form(""),
     session_id: str = Form(...),
-    label: str = Form("")
-):
+    label: str = Form(""),
+    authorization: str = Header("")
+):    
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     doc = {
         "owner_id": owner_id,
         "study_id": study_id,
@@ -232,10 +251,13 @@ def start_session(
 #Endpoint to post end of session to mongo
 @app.post("/sessions/stop")
 def stop_session(
-    owner_id: str = Form(...),
     study_id: str = Form(...),
-    session_id: str = Form(...)
+    session_id: str = Form(...),
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     result = sessions.update_one(
         {
             "owner_id": owner_id,
@@ -258,22 +280,22 @@ def stop_session(
 
 #Endpoint to get studies of certain owner
 @app.get("/studies")
-def get_studies(owner_id: str = ""):
-    query = {}
-    if owner_id:
-        query["owner_id"] = owner_id
+def get_studies(authorization: str = Header("")):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
 
-    data = list(studies.find(query, {"_id": 0}).sort("study_id", 1))
+    data = list(studies.find({"owner_id": owner_id}, {"_id": 0}).sort("study_id", 1))
     return {"studies": data}
 
 #Endpoint to get subjects of certain study and owner
 @app.get("/subjects")
-def get_subjects(study_id: str = "", owner_id: str = ""):
-    query = {}
+def get_subjects(study_id: str = "", authorization: str = Header("")):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
+    query = {"owner_id": owner_id}
     if study_id:
         query["study_id"] = study_id
-    if owner_id:
-        query["owner_id"] = owner_id
 
     data = list(
         subjects.find(query, {"_id": 0}).sort("subject_id", 1)
@@ -282,12 +304,13 @@ def get_subjects(study_id: str = "", owner_id: str = ""):
 
 #Endpoint to get phases of certain study and owner
 @app.get("/phases")
-def get_phases(study_id: str = "", owner_id: str = "", subject_id: str = ""):
-    query = {}
+def get_phases(study_id: str = "", authorization: str = Header(""), subject_id: str = ""):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+    
+    query = {"owner_id": owner_id}
     if study_id:
         query["study_id"] = study_id
-    if owner_id:
-        query["owner_id"] = owner_id
     if subject_id:
         query["subject_id"] = subject_id
 
@@ -299,16 +322,16 @@ def get_phases(study_id: str = "", owner_id: str = "", subject_id: str = ""):
 #Endpoint to get sessions 
 @app.get("/sessions")
 def get_sessions(
-    owner_id: str = "",
     study_id: str = "",
     subject_id: str = "",
     phase_id: str = "",
     status: str = "",
+    authorization: str = Header("")
 ):
-    query = {}
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+    query = {"owner_id": owner_id}
 
-    if owner_id:
-        query["owner_id"] = owner_id
     if study_id:
         query["study_id"] = study_id
     if subject_id:
@@ -372,12 +395,15 @@ def counts_by_date_and_leaning(owner_id ="", study_id="", subject_id="", phase_i
 #Political leaning stats endpoint
 @app.get("/stats/political-leaning")
 def political_leaning_stats(
-    owner_id: str = "",
     study_id: str = "",
     subject_id: str = "",
     phase_id: str = "",
     session_id: str = "",
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     result = counts_by_date_and_leaning(owner_id, study_id, subject_id, phase_id, session_id)
     return {"series": result}
 
@@ -386,7 +412,6 @@ os.makedirs("uploads", exist_ok=True)
 #Endpoint to upload image
 @app.post("/upload")
 async def upload(
-    ownerId: str = Form(""),
     image: UploadFile = File(...),
     tabId: str = Form(""),
     pageUrl: str = Form(""),
@@ -395,13 +420,17 @@ async def upload(
     subjectId: str = Form(""),
     phaseId: str = Form(""),
     sessionId: str = Form(""),
+    authorization: str = Header("")
 ):
+    user = get_current_user(authorization)
+    owner_id = str(user["_id"])
+
     data = await image.read()
     if not data:
         raise HTTPException(status_code=400, detail="Empty image")
 
     doc = {
-        "owner_id": ownerId,
+        "owner_id": owner_id,
         "filename": image.filename,
         "content_type": image.content_type,
         "image_bytes": Binary(data),
@@ -721,3 +750,4 @@ async def processing_worker():
 @app.on_event("startup")
 async def start_background_worker():
     asyncio.create_task(processing_worker())
+
