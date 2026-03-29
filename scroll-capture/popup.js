@@ -3,6 +3,25 @@
 const statusEl = document.getElementById("status");
 const API_BASE = "https://echochamber-q214.onrender.com";
 
+//Login helper
+async function loginExtension(email, password) {
+  const formData = new FormData();
+  formData.append("email", email);
+  formData.append("password", password);
+
+  const res = await fetch(`${API_BASE}/login`, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Login failed: ${res.status} ${text}`);
+  }
+
+  return await res.json();
+}
+
 //Calling me endpoint to fetch token
 async function fetchMe(token) {
   const res = await fetch(`${API_BASE}/me`, {
@@ -100,6 +119,48 @@ async function populatePhases(ownerId, studyId) {
   }
 }
 
+//Login button handler
+document.getElementById("login").addEventListener("click", async () => {
+  try {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const result = await loginExtension(email, password);
+
+    await chrome.storage.local.set({
+      authToken: result.token
+    });
+
+    document.getElementById("authToken").value = result.token;
+
+    const me = await fetchMe(result.token);
+    await populateStudies(me.user_id);
+
+    document.getElementById("subjectId").innerHTML = `<option value="">Select subject</option>`;
+    document.getElementById("phaseId").innerHTML = `<option value="">Select phase</option>`;
+
+    statusEl.textContent = `Logged in as ${me.email}`;
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "Login failed";
+  }
+});
+
+//Clearing stored token and resetting dropdown
+document.getElementById("logout").addEventListener("click", async () => {
+  await chrome.storage.local.remove(["authToken"]);
+
+  document.getElementById("authToken").value = "";
+  document.getElementById("email").value = "";
+  document.getElementById("password").value = "";
+
+  document.getElementById("studyId").innerHTML = `<option value="">Select study</option>`;
+  document.getElementById("subjectId").innerHTML = `<option value="">Select subject</option>`;
+  document.getElementById("phaseId").innerHTML = `<option value="">Select phase</option>`;
+
+  statusEl.textContent = "Logged out";
+});
+
 //Listening for when the authentication token changes
 document.getElementById("authToken").addEventListener("change", async () => {
   try {
@@ -139,10 +200,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("authToken").value = saved.authToken;
       const me = await fetchMe(saved.authToken);
       await populateStudies(me.user_id);
+      statusEl.textContent = `Logged in as ${me.email}`;
     }
   } catch (e) {
     console.error("Failed to initialise popup:", e);
-    statusEl.textContent = "Failed to load study data";
+    statusEl.textContent = "Not logged in";
   }
 });
 
