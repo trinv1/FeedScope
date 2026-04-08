@@ -718,7 +718,7 @@ def counts_by_date_and_leaning(owner_id ="", study_id="", subject_id="", phase_i
     return list(tweets.aggregate(pipeline))
 
 #Finding leaning of certain topics for accounts
-def topic_by_leaning(owner_id="", study_id="", subject_id="", phase_id="", session_id=""):
+def topic_by_leaning(owner_id="", study_id="", subject_id="", phase_id="", session_id="", limit=20):
     match_stage = {}
 
     if owner_id:
@@ -774,7 +774,7 @@ def topic_by_leaning(owner_id="", study_id="", subject_id="", phase_id="", sessi
                 "leanings": 1
             }
         },
-        {"$sort": {"total": -1}}
+        {"$sort": {"total": -1}},
         {"$limit": limit}
     ])
 
