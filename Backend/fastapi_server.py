@@ -3,7 +3,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from bson import Binary
@@ -140,6 +140,82 @@ def change_password(
     )
 
     return {"ok": True, "message": "Password changed successfully"}
+
+#Endpoint to request password reset
+@app.post("/forgot-password")
+def forgot_password(email: str = Form(...)):
+    user = users.find_one({"email": email})
+
+    #Always return same response so emails cannot be enumerated
+    if not user:
+        return {"ok": True, "message": "If that email exists, a reset token has been generated."}
+
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "reset_token": reset_token,
+                "reset_token_expires_at": expires_at
+            }
+        }
+    )
+
+    #just returning token directly right now
+    return {
+        "ok": True,
+        "message": "Reset token generated",
+        "reset_token": reset_token
+    }
+
+#Endpoint to reset password using reset token
+@app.post("/reset-password")
+def reset_password(
+    email: str = Form(...),
+    reset_token: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    user = users.find_one({"email": email})
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or reset token")
+
+    stored_token = user.get("reset_token")
+    expires_at = user.get("reset_token_expires_at")
+
+    if not stored_token or stored_token != reset_token:
+        raise HTTPException(status_code=400, detail="Invalid email or reset token")
+
+    if not expires_at or expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+
+    new_password_hash = pwd_context.hash(new_password)
+    new_auth_token = secrets.token_hex(32)
+
+    users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "password_hash": new_password_hash,
+                "auth_token": new_auth_token
+            },
+            "$unset": {
+                "reset_token": "",
+                "reset_token_expires_at": ""
+            }
+        }
+    )
+
+    return {"ok": True, "message": "Password reset successfully"}
 
 #Get current user from token
 def get_current_user(authorization: str = Header("")):
