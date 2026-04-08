@@ -11,7 +11,7 @@ db = client["SocialMediaDB"]
 tweets = db["tweets"]
 
 result = tweets.delete_many({
-    "actor_commentary": {"$exists": True}
+    "phase_id": "5"
 })
 
 print(f"Deleted {result.deleted_count} documents.")

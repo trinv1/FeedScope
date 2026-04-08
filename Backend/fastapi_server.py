@@ -105,6 +105,42 @@ def login(
         "token": token
     }
 
+#Endpoint to change password for logged in user
+@app.post("/change-password")
+def change_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    authorization: str = Header("")
+):
+    user = get_current_user(authorization)
+
+    #Check current password is correct
+    if not pwd_context.verify(current_password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    #Check new passwords match
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="New passwords do not match")
+
+    #Basic password validation
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+
+    #Prevent reusing same password
+    if pwd_context.verify(new_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="New password must be different from current password")
+
+    #Hash and store new password
+    new_password_hash = pwd_context.hash(new_password)
+
+    users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"password_hash": new_password_hash}}
+    )
+
+    return {"ok": True, "message": "Password changed successfully"}
+
 #Get current user from token
 def get_current_user(authorization: str = Header("")):
     if not authorization.startswith("Bearer "):
@@ -571,7 +607,7 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
             "$match": {
                 "words": {
                     "$nin": [
-                        "", "there", "once", "one", "the", "and", "to", "of", "a", "in", "is", "for", "on", "movie",
+                        "", "there", "once", "one", "the", "and", "to", "of", "a", "in", "is", "for", "on", "movie", "-"
                         "that", "with", "as", "it", "this", "at", "by", "from", "be", "are", "more", "out", "all"
                         "was", "were", "will", "would", "should", "could", "an", "like", "not", "new", "am", "been",
                         "i", "you", "he", "she", "we", "they", "them", "his", "her", "people", "who", "real", "into",

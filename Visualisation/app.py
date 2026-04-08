@@ -52,7 +52,7 @@ def login_user(email, password):
     r.raise_for_status()
     return r.json()
 
-st.title("EchoChamber")
+st.title("FeedScope")
 
 #If user id isnt in session state, show tabs
 if not st.session_state["user_id"]:
@@ -626,7 +626,7 @@ with tab3:
                     except requests.HTTPError as e:
                         st.error(f"API error: {e}")
                     except Exception as e:
-                        st.error(f"Unexpected error: {e}")
+                        st.error(f"Data is currently being analysed. Try again later")
 
 with tab4: 
     
