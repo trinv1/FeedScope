@@ -189,7 +189,13 @@ def reset_password(
     if not stored_token or stored_token != reset_token:
         raise HTTPException(status_code=400, detail="Invalid email or reset token")
 
-    if not expires_at or expires_at < datetime.now(timezone.utc):
+    if not expires_at:
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+
+    if expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Reset token has expired")
 
     if new_password != confirm_password:

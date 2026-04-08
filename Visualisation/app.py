@@ -70,11 +70,35 @@ def change_password(current_password, new_password, confirm_password):
 
 st.title("FeedScope")
 
+#Helper function to request password reset
+def forgot_password(email):
+    data = {
+        "email": email,
+    }
+    r = requests.post(f"{API_BASE}/forgot-password", data=data)
+    r.raise_for_status()
+    return r.json()
+
+
+#Helper function to reset password using token
+def reset_password(email, reset_token, new_password, confirm_password):
+    data = {
+        "email": email,
+        "reset_token": reset_token,
+        "new_password": new_password,
+        "confirm_password": confirm_password,
+    }
+    r = requests.post(f"{API_BASE}/reset-password", data=data)
+    r.raise_for_status()
+    return r.json()
+
 #If user id isnt in session state, show tabs
 if not st.session_state["user_id"]:
-    tab1, tab2 = st.tabs(["Login", "Sign up"])
+    tab1, tab2, tab3 = st.tabs(["Login", "Sign up", "Forgot password"])
 
     with tab1:
+        st.markdown("### Login")
+
         #Login form checking user info
         with st.form("login_form"):
             login_email = st.text_input("Email")
@@ -93,6 +117,8 @@ if not st.session_state["user_id"]:
                     st.error(f"Invalid email or password. Please try again")
 
     with tab2:
+        st.markdown("### Sign up")
+
         #Signup form storing user info
         with st.form("signup_form"):
             signup_email = st.text_input("Email", key="signup_email") 
@@ -109,6 +135,49 @@ if not st.session_state["user_id"]:
                     st.rerun()
                 except Exception as e:
                     st.error(f"Signup failed. Email already exists")
+    
+    with tab3:
+        st.markdown("### Forgot Password")
+
+        with st.form("forgot_password_form"):
+            forgot_email = st.text_input("Enter your email", key="forgot_email")
+            forgot_submit = st.form_submit_button("Generate Reset Token")
+
+            if forgot_submit:
+                try:
+                    result = forgot_password(forgot_email)
+                    st.success("If that email exists, a reset token has been generated.")
+
+                    #Temporary for development only
+                    if "reset_token" in result:
+                        st.info(f"Reset token: {result['reset_token']}")
+                except Exception:
+                    st.error("Could not generate reset token")
+
+        with st.form("reset_password_form"):
+            reset_email = st.text_input("Email", key="reset_email")
+            reset_token = st.text_input("Reset Token")
+            reset_new_password = st.text_input("New Password", type="password")
+            reset_confirm_password = st.text_input("Confirm New Password", type="password")
+            reset_submit = st.form_submit_button("Reset Password")
+
+            if reset_submit:
+                try:
+                    reset_password(
+                        reset_email,
+                        reset_token,
+                        reset_new_password,
+                        reset_confirm_password
+                    )
+                    st.success("Password reset successfully. You can now log in.")
+                except requests.HTTPError as e:
+                    try:
+                        error_message = e.response.json().get("detail", "Reset failed")
+                    except Exception:
+                        error_message = "Reset failed"
+                    st.error(error_message)
+                except Exception:
+                    st.error("Unexpected error while resetting password")
 
     st.stop()
 
@@ -145,7 +214,8 @@ with st.sidebar.form("change_password_form"):
         except Exception as e:
             st.sidebar.error("Unexpected error while updating password")
 
-tab3, tab4, tab5 = st.tabs(["Analysis", "Create Study", "Edit/Delete Study"])
+
+tab4, tab5, tab6 = st.tabs(["Analysis", "Create Study", "Edit/Delete Study"])
 
 #Helper functions to create study, subject and phase
 def create_study(study_id, name, description):
@@ -378,7 +448,7 @@ def delete_phase(study_id, phase_id):
     r.raise_for_status()
     return r.json()
 
-with tab3:
+with tab4:
     st.title("Algorithmic Bias Analysis")
 
     #Making pie chart from collected stats
@@ -667,7 +737,7 @@ with tab3:
                     except Exception as e:
                         st.error(f"Data is currently being analysed. Try again later")
 
-with tab4: 
+with tab5: 
     
     st.header("Create Study")
 
@@ -732,7 +802,7 @@ with tab4:
             except Exception as e:
                 st.error(f"Phase ID already exists")
     
-with tab5:
+with tab6:
     #DELETE / EDIT STUDY
     st.header("Edit / Delete Study")
 
