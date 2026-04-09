@@ -29,6 +29,9 @@ query_params = st.query_params
 reset_token_from_url = query_params.get("reset_token", "")
 reset_email_from_url = query_params.get("email", "")
 
+verify_token_from_url = query_params.get("verify_token", "")
+verify_email_from_url = query_params.get("email", "")
+
 #Helper returning auth token in session state
 def auth_headers():
     return {
@@ -119,6 +122,20 @@ if not st.session_state["user_id"]:
                 except Exception as e:
                     st.error(f"Invalid email or password. Please try again")
 
+            if verify_token_from_url:
+                try:
+                    data = {
+                        "email": verify_email_from_url,
+                        "verify_token": verify_token_from_url
+                    }
+
+                    r = requests.post(f"{API_BASE}/verify-email", data=data)
+                    r.raise_for_status()
+
+                    st.success("Email verified successfully. You can now log in.")
+                except Exception as e:
+                    st.error("Verification failed or expired.")
+
     with tab2:
         st.markdown("### Sign up")
 
@@ -150,8 +167,14 @@ if not st.session_state["user_id"]:
                 try:
                     forgot_password(forgot_email)
                     st.success("If that email exists, a reset link has been sent.")
-                except Exception:
-                    st.error("Could not send reset email")
+                except requests.HTTPError as e:
+                    try:
+                        error_message = e.response.json().get("detail", "Could not send reset email")
+                    except Exception:
+                        error_message = f"Could not send reset email: {e}"
+                    st.error(error_message)
+                except Exception as e:
+                    st.error(f"Could not send reset email: {e}")
 
         with st.form("reset_password_form"):
             reset_email = st.text_input("Email", value=reset_email_from_url, key="reset_email")

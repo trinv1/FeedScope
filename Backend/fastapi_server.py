@@ -84,6 +84,7 @@ def signup(
         "auth_token": token,
         "created_at": datetime.now(timezone.utc),
     }
+    
 
     result = users.insert_one(doc)
     return {"ok": True, "user_id": str(result.inserted_id), "email": email, "token": token}
@@ -97,6 +98,9 @@ def login(
     user = users.find_one({"email": email})
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not user.get("is_verified", False):
+        raise HTTPException(status_code=403, detail="Please verify your email before logging in")
 
     if not pwd_context.verify(password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -114,6 +118,68 @@ def login(
         "email": user["email"],
         "token": token
     }
+
+#Helper function to send email to verify account on signup
+def send_verification_email(user_email: str):
+    verify_token = serializer.dumps(user_email, salt="email-verify")
+    verify_link = f"{FRONTEND_URL}/?verify_token={verify_token}&email={user_email}"
+
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    payload = {
+        "sender": {
+            "name": SENDER_NAME,
+            "email": SENDER_EMAIL
+        },
+        "to": [{"email": user_email}],
+        "subject": "Verify your FeedScope account",
+        "htmlContent": f"""
+        <html>
+            <body>
+                <p>Hello,</p>
+                <p>Please verify your FeedScope account:</p>
+                <p><a href="{verify_link}">{verify_link}</a></p>
+                <p>This link expires in 1 hour.</p>
+            </body>
+        </html>
+        """
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    response = requests.post(url, json=payload, headers=headers, timeout=20)
+
+    if response.status_code >= 400:
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+    
+#Endpoint to verify email
+@app.post("/verify-email")
+def verify_email(email: str = Form(...), verify_token: str = Form(...)):
+
+    try:
+        token_email = serializer.loads(
+            verify_token,
+            salt="email-verify",
+            max_age=3600
+        )
+    except SignatureExpired:
+        raise HTTPException(status_code=400, detail="Verification link expired")
+    except BadSignature:
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
+    if token_email != email:
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
+    users.update_one(
+        {"email": email},
+        {"$set": {"is_verified": True}}
+    )
+
+    return {"ok": True, "message": "Email verified successfully"}
 
 #Endpoint to change password for logged in user
 @app.post("/change-password")
