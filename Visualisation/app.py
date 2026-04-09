@@ -149,18 +149,15 @@ if not st.session_state["user_id"]:
             if signup_submit:
                 try:
                     result = signup_user(signup_email, signup_password)
-                    st.session_state["user_id"] = result["user_id"]
-                    st.session_state["user_email"] = result["email"]
-                    st.session_state["auth_token"] = result["token"]
-                    st.success("Account created successfully")
-                    st.rerun()
+                    st.success(result.get("message", "Account created. Please verify your email."))
                 except requests.HTTPError as e:
                     try:
                         error_message = e.response.json().get("detail", "Signup failed")
                     except Exception:
                         error_message = "Signup failed"
-
                     st.error(error_message)
+                except Exception as e:
+                    st.error(f"Unexpected signup error: {e}")
     
     with tab3:
         st.markdown("### Forgot Password")
