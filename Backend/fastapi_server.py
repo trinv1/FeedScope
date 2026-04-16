@@ -797,7 +797,8 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
         "how", "best", "many", "off", "its", "up", "road", "young", "than", "then", "last",
         "youre", "man", "seeds", "got", "made", "know", "dont", "why", "way", "feel", "him",
         "very", "old", "before", "back", "only", "being", "sure", "make", "these", "thank", "thanks",
-        "take", "during", "going", "other", "day"
+        "take", "during", "going", "other", "day", "most", "ever", "im", "club", "fuck", "shit", "home", "any",
+        "im", "o", "done", "com", "even", "series", "any", "scene", "word", "said", "job", "000", "50", "year", "may"
     }
 
     docs = list(tweets.find(query, {"tweet": 1, "_id": 0}))
