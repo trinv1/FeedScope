@@ -17,6 +17,8 @@ from passlib.context import CryptContext
 import secrets
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import requests
+import re
+from collections import Counter
 
 load_dotenv()
 
@@ -771,79 +773,57 @@ def delete_phase(
 
 #Most common words found in a session
 def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="", limit=20):
-    match_stage = {}
+    query = {}
 
     if owner_id:
-        match_stage["owner_id"] = owner_id
+        query["owner_id"] = owner_id
     if study_id:
-        match_stage["study_id"] = study_id
+        query["study_id"] = study_id
     if subject_id:
-        match_stage["subject_id"] = subject_id
+        query["subject_id"] = subject_id
     if phase_id:
-        match_stage["phase_id"] = phase_id
+        query["phase_id"] = phase_id
     if session_id:
-        match_stage["session_id"] = session_id
+        query["session_id"] = session_id
 
-    pipeline = []
+    stop_words = {
+        "", "there", "once", "one", "the", "and", "to", "of", "a", "in", "is", "for", "on", "movie", "-",
+        "that", "with", "as", "it", "this", "at", "by", "from", "be", "are", "more", "out", "all",
+        "was", "were", "will", "would", "should", "could", "an", "like", "not", "new", "am", "been",
+        "i", "you", "he", "she", "we", "they", "them", "his", "her", "people", "who", "real", "into",
+        "my", "your", "our", "their", "some", "can", "just", "every", "now", "shes", "time", "get",
+        "have", "has", "had", "do", "does", "did", "when", "no", "after", "me", "what", "first",
+        "but", "if", "or", "so", "because", "about", "well", "years", "never", "life", "hes", "see",
+        "how", "best", "many", "off", "its", "up", "road", "young", "than", "then", "last",
+        "youre", "man", "seeds", "got", "made", "know", "dont", "why", "way", "feel", "him",
+        "very", "old", "before", "back", "only", "being", "sure", "make", "these", "thank", "thanks",
+        "take", "during", "going", "other", "day"
+    }
 
-    if match_stage:
-        pipeline.append({"$match": match_stage})
+    docs = list(tweets.find(query, {"tweet": 1, "_id": 0}))
 
-    pipeline.extend([
-        {
-            "$project": {
-                "clean_tweet": {
-                    "$regexReplace": {
-                        "input": {
-                            "$replaceAll": {
-                                "input": {
-                                    "$replaceAll": {
-                                        "input": {"$toLower": "$tweet"},
-                                        "find": "’",
-                                        "replacement": ""
-                                    }
-                                },
-                                "find": "'",
-                                "replacement": ""
-                            }
-                        },
-                        "regex": r"[^a-z0-9\s]",
-                        "replacement": ""
-                    }
-                }
-            }
-        },
-        {"$unwind": "$words"},
-        {
-            "$match": {
-                "words": {
-                    "$nin": [
-                           "", "there", "once", "one", "the", "and", "to", "of", "a", "in", "is", "for", "on", "movie", "-",
-                            "that", "with", "as", "it", "this", "at", "by", "from", "be", "are", "more", "out", "all",
-                            "was", "were", "will", "would", "should", "could", "an", "like", "not", "new", "am", "been",
-                            "i", "you", "he", "she", "we", "they", "them", "his", "her", "people", "who", "real", "into",
-                            "my", "your", "our", "their", "some", "can", "just", "every", "now", "she's", "time", "get",
-                            "have", "has", "had", "do", "does", "did", "when", "no", "after", "me", "what", "first",
-                            "but", "if", "or", "so", "because", "about", "well", "years", "never", "life", "he's", "see",
-                            "how", "&", "best", "many", "off", "its", "it's", "up", "road", "young", "than", "then", "last",
-                            "+", "you're", "man", "seeds", "got", "made", "know", "don't", "dont", "why", "way", "feel", "him",
-                            "very", "old", "before", "back", "only", "being", "sure", "make", "these", "thank", "thanks", "take", "during",
-                            "going", "other", "day"
-                    ]
-                }
-            }
-        },
-        {
-            "$group": {
-                "_id": "$words",
-                "count": {"$sum": 1}
-            }
-        },
-        {"$sort": {"count": -1}},
-        {"$limit": limit}
-    ])
+    counter = Counter()
 
-    return list(tweets.aggregate(pipeline))
+    for doc in docs:
+        tweet = doc.get("tweet", "")
+        if not tweet:
+            continue
+
+        tweet = tweet.lower()
+        tweet = tweet.replace("’", "'")
+        tweet = tweet.replace("'", "")
+        tweet = re.sub(r"[^a-z0-9\s]", " ", tweet)
+
+        words = tweet.split()
+
+        for word in words:
+            if word not in stop_words:
+                counter[word] += 1
+
+    return [
+        {"_id": word, "count": count}
+        for word, count in counter.most_common(limit)
+    ]
 
 #Endpoint getting top words of that session
 @app.get("/stats/top-words")
