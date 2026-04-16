@@ -792,11 +792,24 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
     pipeline.extend([
         {
             "$project": {
-                "words": {
-                    "$split": [
-                        {"$toLower": "$tweet"},
-                        " "
-                    ]
+                "clean_tweet": {
+                    "$regexReplace": {
+                        "input": {
+                            "$replaceAll": {
+                                "input": {
+                                    "$replaceAll": {
+                                        "input": {"$toLower": "$tweet"},
+                                        "find": "’",
+                                        "replacement": ""
+                                    }
+                                },
+                                "find": "'",
+                                "replacement": ""
+                            }
+                        },
+                        "regex": r"[^a-z0-9\s]",
+                        "replacement": ""
+                    }
                 }
             }
         },
@@ -814,7 +827,8 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
                             "but", "if", "or", "so", "because", "about", "well", "years", "never", "life", "he's", "see",
                             "how", "&", "best", "many", "off", "its", "it's", "up", "road", "young", "than", "then", "last",
                             "+", "you're", "man", "seeds", "got", "made", "know", "don't", "dont", "why", "way", "feel", "him",
-                            "very", "old", "before", "back", "only", "being", "sure", "make"
+                            "very", "old", "before", "back", "only", "being", "sure", "make", "these", "thank", "thanks", "take", "during",
+                            "going", "other", "day"
                     ]
                 }
             }
