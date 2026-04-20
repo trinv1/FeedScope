@@ -66,18 +66,18 @@ Tweets are analysed using large language models to determine:
 # How to run
 **Clone repository:**
 
-git clone https://github.com/trinv1/EchoChamber
-cd echochamber
+* git clone https://github.com/trinv1/EchoChamber
+* cd echochamber
 
 **Install Dependencies:**
-pip install -r Backend/requirements.txt
-pip install -r requirements.txt
+* pip install -r Backend/requirements.txt
+* pip install -r requirements.txt
 
 **Configure environmental variables:**
-OPENAI_API_KEY=your_openai_key
-BREVO_API_KEY=your_brevo_key
-SECRET_KEY=your_secret_key
-MONGO_URI=your_mongodb_connection_string
+* OPENAI_API_KEY=your_openai_key
+* BREVO_API_KEY=your_brevo_key
+* SECRET_KEY=your_secret_key
+* MONGO_URI=your_mongodb_connection_string
 
 **Create account:**
 1. Navigate to: https://feedscopeinc.streamlit.app/
