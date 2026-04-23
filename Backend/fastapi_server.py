@@ -24,7 +24,7 @@ load_dotenv()
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_NAME = os.getenv("SENDER_NAME", "FeedScope")
+SENDER_NAME = os.getenv("SENDER_NAME", "EchoChamber")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -145,12 +145,12 @@ def send_verification_email(user_email: str):
             "email": SENDER_EMAIL
         },
         "to": [{"email": user_email}],
-        "subject": "Verify your FeedScope account",
+        "subject": "Verify your EchoChamber account",
         "htmlContent": f"""
         <html>
             <body>
                 <p>Hello,</p>
-                <p>Please verify your FeedScope account:</p>
+                <p>Please verify your EchoChamber account:</p>
                 <p><a href="{verify_link}">{verify_link}</a></p>
                 <p>This link expires in 1 hour.</p>
             </body>
@@ -308,12 +308,12 @@ def send_reset_email(user_email: str):
         "to": [
             {"email": user_email}
         ],
-        "subject": "Reset your FeedScope password",
+        "subject": "Reset your EchoChamber password",
         "htmlContent": f"""
         <html>
             <body>
                 <p>Hello,</p>
-                <p>You requested a password reset for your FeedScope account.</p>
+                <p>You requested a password reset for your EchoChamber account.</p>
                 <p>Click the link below to reset your password:</p>
                 <p><a href="{reset_link}">{reset_link}</a></p>
                 <p>This link expires in 1 hour.</p>

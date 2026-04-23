@@ -74,7 +74,7 @@ def change_password(current_password, new_password, confirm_password):
     r.raise_for_status()
     return r.json()
 
-st.title("FeedScope")
+st.title("EchoChamber")
 
 #Helper function to request password reset
 def forgot_password(email):

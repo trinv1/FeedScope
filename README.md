@@ -20,7 +20,7 @@ The project was developed to investigate whether gender-related account signals 
 * MONGO_URI=your_mongodb_connection_string
 
 # How to start
-1. Open streamlit app: https://feedscopeinc.streamlit.app/
+1. Open streamlit app: https://echochamber.streamlit.app/
 * Create account
 * Login
 
