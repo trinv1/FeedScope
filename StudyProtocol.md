@@ -1,10 +1,11 @@
-STUDY PROTOCOL FOR X FEED CAPTURE
+# STUDY PROTOCOL FOR X FEED CAPTURE
 
 This protocol ensures consistent, unbiased, and replicable data collection for analysing personalised recommendation feeds on X.
 
 ---
 
 STUDY SCOPE INTERPRETATION
+
 This study should be understood as a proof of concept designed to demonstrate a controlled methodology for analysing personalised recommendation systems.
 
 The experiment was conducted using two accounts only, and therefore the results are not intended to be generalisable or definitive. Instead, the findings provide indicative insights into how recommendation systems may respond to identity signals and user behaviour under controlled conditions.
