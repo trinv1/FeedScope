@@ -53,10 +53,10 @@ sessions = db["sessions"]
 #Creating indexes
 users.create_index("email", unique=True, sparse=True)
 tweets.create_index("tweet_hash", unique=True, sparse=True)
-studies.create_index([("owner_id", 1), ("study_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$ne": True}})
-subjects.create_index([("owner_id", 1), ("study_id", 1), ("subject_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$ne": True}})
-phases.create_index([("owner_id", 1), ("study_id", 1), ("phase_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$ne": True}})
-sessions.create_index([("owner_id", 1), ("study_id", 1), ("session_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$ne": True}})
+studies.create_index([("owner_id", 1), ("study_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": True}})
+subjects.create_index([("owner_id", 1), ("study_id", 1), ("subject_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": True}})
+phases.create_index([("owner_id", 1), ("study_id", 1), ("phase_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": True}})
+sessions.create_index([("owner_id", 1), ("study_id", 1), ("session_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": True}})
 
 app = FastAPI()
 
