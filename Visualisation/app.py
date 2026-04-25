@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-API_BASE = "https://echochamber-q214.onrender.com"
+API_BASE = "echochamber-production-573f.up.railway.app"
 
 #Fixed colours for political leaning across all charts
 LEANING_COLOURS = {

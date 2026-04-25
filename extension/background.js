@@ -50,7 +50,7 @@ async function uploadToRender(dataUrl, tabId, pageUrl, ts, studyId, subjectId, p
   formData.append("sessionId", sessionId ?? "");
 
   //Sending POST request with token to upload endpoint
-  const res = await fetch("https://echochamber-q214.onrender.com/upload", {
+  const res = await fetch("echochamber-production-573f.up.railway.app/upload", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${authToken}`
@@ -77,7 +77,7 @@ async function startSession(studyId, subjectId, phaseId) {
   formData.append("label", "Extension capture run");
 
   //Sending authenticated POST request to endpoint
-  const res = await fetch("https://echochamber-q214.onrender.com/sessions/start", {
+  const res = await fetch("echochamber-production-573f.up.railway.app/sessions/start", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${authToken}`
@@ -103,7 +103,7 @@ async function stopSession(studyId, sessionId) {
   formData.append("study_id", studyId);
   formData.append("session_id", sessionId);
 
-  const res = await fetch("https://echochamber-q214.onrender.com/sessions/stop", {
+  const res = await fetch("echochamber-production-573f.up.railway.app/sessions/stop", {
     method: "POST",
     body: formData,
     headers: {

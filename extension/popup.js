@@ -1,7 +1,7 @@
 //Promise is a placeholder for a value that is
 //  not yet available but will be in the future
 const statusEl = document.getElementById("status");
-const API_BASE = "https://echochamber-q214.onrender.com";
+const API_BASE = "echochamber-production-573f.up.railway.app";
 
 //Login helper
 async function loginExtension(email, password) {
