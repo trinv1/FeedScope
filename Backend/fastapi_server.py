@@ -53,6 +53,30 @@ sessions = db["sessions"]
 #Creating indexes
 users.create_index("email", unique=True, sparse=True)
 tweets.create_index("tweet_hash", unique=True, sparse=True)
+tweets.create_index([
+    ("owner_id", 1),
+    ("study_id", 1),
+    ("subject_id", 1),
+    ("phase_id", 1),
+    ("session_id", 1)
+])
+
+tweets.create_index([
+    ("owner_id", 1),
+    ("study_id", 1),
+    ("subject_id", 1),
+    ("phase_id", 1),
+    ("sentiment.political_leaning", 1)
+])
+
+tweets.create_index([
+    ("owner_id", 1),
+    ("study_id", 1),
+    ("subject_id", 1),
+    ("phase_id", 1),
+    ("sentiment.topic", 1)
+])
+
 studies.create_index([("owner_id", 1), ("study_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": False}})
 subjects.create_index([("owner_id", 1), ("study_id", 1), ("subject_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": False}})
 phases.create_index([("owner_id", 1), ("study_id", 1), ("phase_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": False}})

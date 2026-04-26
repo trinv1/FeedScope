@@ -281,20 +281,33 @@ def create_phase(study_id, phase_id, label, start_date, end_date):
     r.raise_for_status()
     return r.json()
 
+#Cached GET helper for stopping Streamlit from calling the same backend endpoint again on every rerun.
+@st.cache_data(ttl=60)
+def cached_get(url, params, token):
+    headers = {"Authorization": f"Bearer {token}"}
+    r = requests.get(url, params=params, headers=headers)
+    r.raise_for_status()
+    return r.json()
+
 #Fetching studies from api
 def fetch_studies():
-    r = requests.get(f"{API_BASE}/studies", headers=auth_headers())
-    r.raise_for_status()
-    return r.json()["studies"]
+    return cached_get(
+        f"{API_BASE}/studies",
+        {},
+        st.session_state["auth_token"]
+    )["studies"]
 
 #Fetching subjects from api
 def fetch_subjects(study_id=""):
     params = {}
     if study_id:
         params["study_id"] = study_id
-    r = requests.get(f"{API_BASE}/subjects", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()["subjects"]
+
+    return cached_get(
+        f"{API_BASE}/subjects",
+        params,
+        st.session_state["auth_token"]
+    )["subjects"]
 
 #Fetching from phases from api
 def fetch_phases(study_id="", subject_id=""):
@@ -303,9 +316,12 @@ def fetch_phases(study_id="", subject_id=""):
         params["study_id"] = study_id
     if subject_id:
         params["subject_id"] = subject_id
-    r = requests.get(f"{API_BASE}/phases", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()["phases"]
+
+    return cached_get(
+        f"{API_BASE}/phases",
+        params,
+        st.session_state["auth_token"]
+    )["phases"]
 
 #Fetching sessions from api
 def fetch_sessions(study_id="", subject_id="", phase_id="", status=""):
@@ -320,9 +336,11 @@ def fetch_sessions(study_id="", subject_id="", phase_id="", status=""):
     if status:
         params["status"] = status
 
-    r = requests.get(f"{API_BASE}/sessions", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()["sessions"]
+    return cached_get(
+        f"{API_BASE}/sessions",
+        params,
+        st.session_state["auth_token"]
+    )["sessions"]
 
 #Fetching tweets
 def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
@@ -336,9 +354,11 @@ def fetch_tweets(study_id="", subject_id="", phase_id="", session_id=""):
     if session_id:
         params["session_id"] = session_id
 
-    r = requests.get(f"{API_BASE}/tweets", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()
+    return cached_get(
+        f"{API_BASE}/tweets",
+        params,
+        st.session_state["auth_token"]
+    )
 
 #Fetching political leaning stats
 def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=""):
@@ -352,14 +372,16 @@ def fetch_political_leaning(study_id="", subject_id="", phase_id="", session_id=
     if session_id:
         params["session_id"] = session_id
 
-    r = requests.get(f"{API_BASE}/stats/political-leaning", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()
+    return cached_get(
+        f"{API_BASE}/stats/political-leaning",
+        params,
+        st.session_state["auth_token"]
+    )
 
 #Fetch top words stats from API for selected filters
 def fetch_top_words(study_id="", subject_id="", phase_id="", session_id="", limit=20):
     params = {"limit": limit}
-   
+
     #Add optional filters if selected
     if study_id:
         params["study_id"] = study_id
@@ -370,10 +392,11 @@ def fetch_top_words(study_id="", subject_id="", phase_id="", session_id="", limi
     if session_id:
         params["session_id"] = session_id
 
-    #Call d endpoint and return JSON response
-    r = requests.get(f"{API_BASE}/stats/top-words", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()
+    return cached_get(
+        f"{API_BASE}/stats/top-words",
+        params,
+        st.session_state["auth_token"]
+    )
 
 #Fetch top topic stats from API for selected filters
 def fetch_top_topics(study_id="", subject_id="", phase_id="", session_id="", limit=10):
@@ -387,9 +410,11 @@ def fetch_top_topics(study_id="", subject_id="", phase_id="", session_id="", lim
     if session_id:
         params["session_id"] = session_id
 
-    r = requests.get(f"{API_BASE}/stats/top-topics", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()
+    return cached_get(
+        f"{API_BASE}/stats/top-topics",
+        params,
+        st.session_state["auth_token"]
+    )
 
 #Fetch topic by leaning stats from API for selected filters
 def fetch_topic_by_leaning(study_id="", subject_id="", phase_id="", session_id="", limit=20):
@@ -403,9 +428,11 @@ def fetch_topic_by_leaning(study_id="", subject_id="", phase_id="", session_id="
     if session_id:
         params["session_id"] = session_id
 
-    r = requests.get(f"{API_BASE}/stats/topic-by-leaning", params=params, headers=auth_headers())
-    r.raise_for_status()
-    return r.json()
+    return cached_get(
+        f"{API_BASE}/stats/topic-by-leaning",
+        params,
+        st.session_state["auth_token"]
+    )
 
 #Summarise one phase into counts + percentages by political leaning
 def summarise_phase_leaning(study_id="", subject_id="", phase_id="", session_id=""):
@@ -953,6 +980,7 @@ with tab5:
             try:
                 result = create_study(new_study_id, new_study_name, new_study_description)
                 st.success(f"Study created: {new_study_id}")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"Study ID already exists")
@@ -973,6 +1001,7 @@ with tab5:
             try:
                 result = create_subject(subject_study_id, new_subject_id, new_subject_label)
                 st.success(f"Subject created: {new_subject_id}")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"Subject ID already exists")
@@ -999,6 +1028,7 @@ with tab5:
                     new_phase_end
                 )
                 st.success(f"Phase created: {new_phase_id}")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"Phase ID already exists")
@@ -1053,6 +1083,7 @@ with tab6:
                             edit_study_description
                         )
                         st.success("Study updated")
+                        st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to update study: {e}")
@@ -1062,6 +1093,7 @@ with tab6:
                     try:
                         delete_study(selected_study_to_edit)
                         st.success("Study deleted")
+                        st.cache_data.clear()
                         st.rerun()
                     except Exception as e:
                         st.error(f"Failed to delete study: {e}")
@@ -1118,6 +1150,7 @@ with tab6:
                                 edit_subject_label
                             )
                             st.success("Subject updated")
+                            st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to update subject: {e}")
@@ -1130,6 +1163,7 @@ with tab6:
                                 selected_subject_to_edit
                             )
                             st.success("Subject deleted")
+                            st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to delete subject: {e}")
@@ -1195,6 +1229,7 @@ with tab6:
                                 edit_phase_end
                             )
                             st.success("Phase updated")
+                            st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to update phase: {e}")
@@ -1207,6 +1242,7 @@ with tab6:
                                 selected_phase_to_edit
                             )
                             st.success("Phase deleted")
+                            st.cache_data.clear()
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed to delete phase: {e}")
