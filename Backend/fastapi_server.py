@@ -870,7 +870,7 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
         "location", "wanna", "today", "5", "3", "work", "film", "watch", "start", "started", "actually", "owning",
         "own", "since", "things", "thing", "end", "experience", "win", "guys", "full", "someone", "smell", "used",
         "find", "guy", "again", "called", "call", "through", "men", "girl", "boy", "woman", "while", "whole", "tv",
-        "theyre", "chair", "days", "two", "paid", "18", "2", "4", "6", "7", "8", "9", "0"
+        "theyre", "chair", "days", "two", "paid", "18", "2", "4", "6", "7", "8", "9", "0", "which"
     }
 
     docs = list(tweets.find(query, {"tweet": 1, "_id": 0}))
