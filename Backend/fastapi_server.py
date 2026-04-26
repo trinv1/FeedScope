@@ -1,3 +1,5 @@
+#----------------------- IMPORTS ----------------------- #
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header
 from datetime import datetime
 from pymongo import MongoClient
@@ -20,6 +22,8 @@ import requests
 import re
 from collections import Counter
 
+#----------------------- ENVIRONMENT VARIABLES ----------------------- #
+
 load_dotenv()
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
@@ -40,6 +44,8 @@ BATCH_SIZE = 10
 BATCH_SLEEP_SEC = 60
 IDLE_SLEEP_SEC = 3
 
+#----------------------- DATABASE CONNECTIONS ----------------------- #
+
 client = MongoClient(MONGO_URI)
 db = client["SocialMediaDB"]
 tweets = db["tweets"]
@@ -49,6 +55,8 @@ phases = db["phases"]
 captures = db["captures"]
 users = db["users"]
 sessions = db["sessions"]
+
+#----------------------- DATABASE INDEXES ----------------------- #
 
 #Creating indexes
 users.create_index("email", unique=True, sparse=True)
@@ -82,6 +90,8 @@ subjects.create_index([("owner_id", 1), ("study_id", 1), ("subject_id", 1)], uni
 phases.create_index([("owner_id", 1), ("study_id", 1), ("phase_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": False}})
 sessions.create_index([("owner_id", 1), ("study_id", 1), ("session_id", 1)], unique=True, partialFilterExpression={"is_deleted": {"$eq": False}})
 
+#----------------------- FASTAPI APP SETUP ----------------------- #
+
 app = FastAPI()
 
 app.add_middleware(
@@ -92,8 +102,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#----------------------- PASSWORD HASHING SETUP ----------------------- #
+
 #Defining passlib hashing algo
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+#----------------------- AUTH ROUTES ----------------------- #
 
 #Posting email and password details to mongo for signup
 @app.post("/signup")
@@ -160,6 +174,8 @@ def login(
         "token": token
     }
 
+#----------------------- EMAIL VERIFICATION HELPERS ----------------------- #
+
 #Helper function to send email to verify account on signup
 def send_verification_email(user_email: str):
     verify_token = serializer.dumps(user_email, salt="email-verify")
@@ -197,6 +213,8 @@ def send_verification_email(user_email: str):
     if response.status_code >= 400:
         raise HTTPException(status_code=500, detail="Failed to send verification email")
     
+#----------------------- EMAIL VERIFICATION ROUTE ----------------------- #
+
 #Endpoint to verify email
 @app.post("/verify-email")
 def verify_email(email: str = Form(...), verify_token: str = Form(...)):
@@ -221,6 +239,8 @@ def verify_email(email: str = Form(...), verify_token: str = Form(...)):
     )
 
     return {"ok": True, "message": "Email verified successfully"}
+
+#----------------------- PASSWORD MANAGEMENT ROUTES ----------------------- #
 
 #Endpoint to change password for logged in user
 @app.post("/change-password")
@@ -321,6 +341,8 @@ def reset_password(
         "message": "Password reset successfully"
     }
 
+#----------------------- PASSWORD RESET EMAIL HELPER ----------------------- #
+
 #Helper function sending reset password email using Brevo API
 def send_reset_email(user_email: str):
     reset_token = serializer.dumps(user_email, salt="password-reset")
@@ -367,6 +389,8 @@ def send_reset_email(user_email: str):
             detail=f"Email sending failed: {response.text}"
         )
 
+#----------------------- CURRENT USER / AUTH TOKEN HELPERS ----------------------- #
+
 #Getting current user using bearer token
 def get_current_user(authorization: str = Header("")):
     if not authorization.startswith("Bearer "):
@@ -388,6 +412,8 @@ def get_me(authorization: str = Header("")):
         "user_id": str(user["_id"]),
         "email": user["email"]
     }
+
+#----------------------- TWEET ROUTES ----------------------- #
 
 #Get tweets of certain owner, study, subject and phase
 @app.get("/tweets")
@@ -413,6 +439,8 @@ def get_tweets(
 
     data = list(tweets.find(query, {"_id": 0}).sort("image_name", 1))
     return {"count": len(data), "tweets": data}
+
+#----------------------- CREATE STUDY / SUBJECT / PHASE ROUTES ----------------------- #
 
 #Endpoint to post studies to mongo
 @app.post("/studies")
@@ -484,6 +512,8 @@ def create_phase(
     result = phases.insert_one(doc)
     return {"ok": True, "id": str(result.inserted_id), "study_id": study_id, "phase_id": phase_id}
 
+#----------------------- SESSION ROUTES ----------------------- #
+
 #Endpoint to post start of session to mongo
 @app.post("/sessions/start")
 def start_session(
@@ -544,6 +574,8 @@ def stop_session(
         raise HTTPException(status_code=404, detail="Active session not found")
 
     return {"ok": True, "session_id": session_id, "status": "stopped"}
+
+#----------------------- GET STUDY / SUBJECT / PHASE / SESSION ROUTES ----------------------- #
 
 #Endpoint to get studies of certain owner
 @app.get("/studies")
@@ -613,6 +645,8 @@ def get_sessions(
     )
 
     return {"sessions": data}
+
+#----------------------- UPDATE ROUTES ----------------------- #
 
 #Route to update studies
 @app.put("/studies/{study_id}")
@@ -711,6 +745,8 @@ def update_phase(
 
     return {"ok": True, "phase_id": phase_id}
 
+#----------------------- SOFT DELETE ROUTES ----------------------- #
+
 #Route to soft delete study
 @app.delete("/studies/{study_id}")
 def delete_study(
@@ -799,6 +835,8 @@ def delete_phase(
 
     return {"ok": True, "phase_id": phase_id, "deleted": True}
 
+#----------------------- TOP WORDS STATS ----------------------- #
+
 #Most common words found in a session
 def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="", limit=20):
     query = {}
@@ -829,7 +867,10 @@ def top_words(owner_id="", study_id="", subject_id="", phase_id="", session_id="
         "im", "o", "done", "com", "even", "series", "any", "scene", "word", "said", "job", "000", "50", "year", "may",
         "think", "2", "s", "u", "next", "over", "down", "something", "too", "shown", "semi", "11", "great", "go",
         "9","wouldve","still", "where", "id", "theres", "1", "built", "understand", "student", "ive", "chuck",
-        "location", "wanna", "today", "5", "3", "work", "film", "watch", "start", "started"
+        "location", "wanna", "today", "5", "3", "work", "film", "watch", "start", "started", "actually", "owning",
+        "own", "since", "things", "thing", "end", "experience", "win", "guys", "full", "someone", "smell", "used",
+        "find", "guy", "again", "called", "call", "through", "men", "girl", "boy", "woman", "while", "whole", "tv",
+        "theyre", "chair", "days", "two", "paid", "18", "2", "4", "6", "7", "8", "9", "0"
     }
 
     docs = list(tweets.find(query, {"tweet": 1, "_id": 0}))
@@ -880,6 +921,8 @@ def get_top_words(
     )
 
     return {"words": result}
+
+#----------------------- TOP TOPICS STATS ----------------------- #
 
 #Top topics of session
 def top_topics(owner_id="", study_id="", subject_id="", phase_id="", session_id="", limit=10):
@@ -940,6 +983,8 @@ def get_top_topics(
 
     return {"topics": result}
 
+#----------------------- POLITICAL LEANING STATS ----------------------- #
+
 #Aggregating date a political leaning
 def counts_by_date_and_leaning(owner_id ="", study_id="", subject_id="", phase_id="", session_id=""):
     match_stage = {}
@@ -984,6 +1029,8 @@ def counts_by_date_and_leaning(owner_id ="", study_id="", subject_id="", phase_i
         {"$sort": {"date": 1}}
     ])
     return list(tweets.aggregate(pipeline))
+
+#----------------------- TOPIC BY LEANING STATS ----------------------- #
 
 #Finding leaning of certain topics for accounts
 def topic_by_leaning(owner_id="", study_id="", subject_id="", phase_id="", session_id="", limit=20):
@@ -1089,7 +1136,11 @@ def political_leaning_stats(
     result = counts_by_date_and_leaning(owner_id, study_id, subject_id, phase_id, session_id)
     return {"series": result}
 
+#----------------------- UPLOAD SETUP ----------------------- #
+
 os.makedirs("uploads", exist_ok=True)
+
+#----------------------- IMAGE UPLOAD ROUTE ----------------------- #
 
 #Endpoint to upload image to Mongo
 @app.post("/upload")
@@ -1139,11 +1190,15 @@ async def upload(
         "status": "queued",
     }
 
+#----------------------- DEBUG ROUTES ----------------------- #
+
 #Endpoint to check server can see queued docs
 @app.get("/debug/queue")
 def debug_queue():
     q = list(captures.find({"status": "queued"}, {"image_bytes": 0, "_id": 0}).sort("created_at", 1).limit(5))
     return {"queued_sample": q, "queued_count": captures.count_documents({"status": "queued"})}
+
+#----------------------- TWEET NORMALISATION / DEDUP HELPERS ----------------------- #
 
 #Normalising tweets
 def normalize_tweet_text(text):
@@ -1169,6 +1224,8 @@ def similarity_score(a, b):
         fuzz.token_sort_ratio(a, b),
         fuzz.token_set_ratio(a, b),
     )
+
+#----------------------- IMAGE PARSING WITH OPENAI ----------------------- #
 
 #Helper function to process one captured image
 def process_one_capture(doc):
@@ -1369,6 +1426,8 @@ def process_one_capture(doc):
 
     return parsed
 
+#----------------------- SENTIMENT ANALYSIS WITH OPENAI ----------------------- #
+
 def process_one_sentiment(collection, doc):
 
     #Getting tweet from document
@@ -1449,6 +1508,8 @@ def process_one_sentiment(collection, doc):
 )
     return sentiment
 
+#----------------------- BACKGROUND PROCESSING WORKER ----------------------- #
+
 #Background worker that keeps processing docs
 async def processing_worker():
     while True:
@@ -1488,6 +1549,8 @@ async def processing_worker():
 
         #Nothing to do
         await asyncio.sleep(IDLE_SLEEP_SEC)
+
+#----------------------- STARTUP EVENT ----------------------- #
 
 #Launching when app starts
 @app.on_event("startup")
